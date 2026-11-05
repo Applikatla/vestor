@@ -1,0 +1,26 @@
+{
+  "name": "ethglobal_mumbai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:whitechain": "hardhat run scripts/deploy.js --network whitechainTestnet",
+    "deploy:whitechain:backup": "hardhat run scripts/deploy.js --network whitechainTestnetBackup",
+    "test": "hardhat test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "dotenv": "^18.0.9",
+    "hardhat": "^2.29.1",
+    "solc": "^0.8.20"
+  }
+}

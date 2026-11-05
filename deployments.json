@@ -1,0 +1,13 @@
+{
+  "network": "whitechainTestnet",
+  "chainId": 1874,
+  "rpcUrl": "https://rpc.ankr.com/whitechain_testnet",
+  "explorerUrl": "https://explorer.testnet.whitechain.io",
+  "deployer": "0x642D2B8a1de2307a1cab2a7b13d57F018d7C02ae",
+  "contracts": {
+    "MockUSDC": "0xD2438B3A2DA2DAF0BE024726120BE240Fe4e49f5",
+    "InventoryRegistry": "0x455664702375c9EfDE6B8C0eEC1131C0Ff076Ab1",
+    "FinancingVault": "0xd0E9BeDCe54Ab0Dde3893f9911B790Eec26D52dD"
+  },
+  "timestamp": "2026-11-05T22:04:07.267Z"
+}
