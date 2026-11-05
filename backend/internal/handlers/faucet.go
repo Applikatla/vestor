@@ -2,11 +2,15 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
+	"ethglobal_mumbai/backend/internal/database"
+	"ethglobal_mumbai/backend/internal/models"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -19,7 +23,88 @@ type FaucetRequest struct {
 	Address string `json:"address" binding:"required"`
 }
 
-// FaucetClaims handles gasless minting of MockUSDC and provides testnet WBT gas to new wallets
+const (
+	FaucetGasAmountWBT = 0.05 // 0.05 WBT native gas sent to user
+	FaucetUSDCAmount   = 10000 // 10,000 Mock USDC sent to user
+	CooldownDuration   = 24 * time.Hour
+)
+
+// GetFaucetInfo returns faucet parameters, reserve balance, and optional address claim eligibility
+func GetFaucetInfo(mockUSDCAddress string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		privateKeyHex := os.Getenv("PRIVATE_KEY")
+		if privateKeyHex == "" {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Server faucet private key not configured"})
+			return
+		}
+		privateKeyHex = strings.TrimPrefix(privateKeyHex, "0x")
+		privateKey, err := crypto.HexToECDSA(privateKeyHex)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid server key"})
+			return
+		}
+
+		faucetAddress := crypto.PubkeyToAddress(privateKey.PublicKey).Hex()
+
+		rpcURL := os.Getenv("WHITECHAIN_TESTNET_RPC")
+		if rpcURL == "" {
+			rpcURL = "https://rpc.ankr.com/whitechain_testnet"
+		}
+
+		var reserveWBT string = "0.0"
+		client, err := ethclient.Dial(rpcURL)
+		if err == nil {
+			defer client.Close()
+			bal, err := client.BalanceAt(context.Background(), crypto.PubkeyToAddress(privateKey.PublicKey), nil)
+			if err == nil {
+				fBal := new(big.Float).Quo(new(big.Float).SetInt(bal), big.NewFloat(1e18))
+				reserveWBT = fmt.Sprintf("%.4f", fBal)
+			}
+		}
+
+		checkAddr := strings.TrimSpace(c.Query("address"))
+		eligible := true
+		var lastClaimAt *time.Time
+		var nextClaimAt *time.Time
+		var secondsRemaining int64 = 0
+
+		if checkAddr != "" && common.IsHexAddress(checkAddr) {
+			normAddr := strings.ToLower(checkAddr)
+			var lastClaim models.FaucetClaim
+			res := database.DB.Where("LOWER(address) = ?", normAddr).Order("created_at desc").First(&lastClaim)
+			if res.Error == nil {
+				elapsed := time.Since(lastClaim.CreatedAt)
+				if elapsed < CooldownDuration {
+					eligible = false
+					lastClaimAt = &lastClaim.CreatedAt
+					next := lastClaim.CreatedAt.Add(CooldownDuration)
+					nextClaimAt = &next
+					secondsRemaining = int64((CooldownDuration - elapsed).Seconds())
+				}
+			}
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"faucet_address":     faucetAddress,
+			"faucet_reserve_wbt": reserveWBT,
+			"usdc_address":       mockUSDCAddress,
+			"package": gin.H{
+				"usdc_amount": FaucetUSDCAmount,
+				"wbt_amount":  FaucetGasAmountWBT,
+				"cooldown":    "24 hours",
+			},
+			"eligibility": gin.H{
+				"eligible":          eligible,
+				"seconds_remaining": secondsRemaining,
+				"last_claimed_at":   lastClaimAt,
+				"next_claim_at":     nextClaimAt,
+			},
+		})
+	}
+}
+
+// ClaimFaucet handles Google Faucet-style token distribution with 24-hour rate limiting per address.
+// The faucet account pays 100% of the gas fees for the user.
 func ClaimFaucet(usdcAddress string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req FaucetRequest
@@ -28,9 +113,28 @@ func ClaimFaucet(usdcAddress string) gin.HandlerFunc {
 			return
 		}
 
-		if !common.IsHexAddress(req.Address) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid EVM recipient address"})
+		recipient := strings.TrimSpace(req.Address)
+		if !common.IsHexAddress(recipient) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid EVM recipient address. Must start with 0x and be 42 characters."})
 			return
+		}
+		normRecipient := strings.ToLower(recipient)
+
+		// 1. Enforce 24-hour rate limit per address
+		var lastClaim models.FaucetClaim
+		if err := database.DB.Where("LOWER(address) = ?", normRecipient).Order("created_at desc").First(&lastClaim).Error; err == nil {
+			elapsed := time.Since(lastClaim.CreatedAt)
+			if elapsed < CooldownDuration {
+				remaining := CooldownDuration - elapsed
+				hours := int(remaining.Hours())
+				minutes := int(remaining.Minutes()) % 60
+				c.JSON(http.StatusTooManyRequests, gin.H{
+					"error": fmt.Sprintf("Daily limit reached. This address already claimed tokens within the last 24 hours. You can claim again in %dh %dm.", hours, minutes),
+					"seconds_remaining": int64(remaining.Seconds()),
+					"next_claim_at":     lastClaim.CreatedAt.Add(CooldownDuration),
+				})
+				return
+			}
 		}
 
 		privateKeyHex := os.Getenv("PRIVATE_KEY")
@@ -59,7 +163,7 @@ func ClaimFaucet(usdcAddress string) gin.HandlerFunc {
 		defer client.Close()
 
 		fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-		targetAddress := common.HexToAddress(req.Address)
+		targetAddress := common.HexToAddress(recipient)
 
 		chainID, err := client.ChainID(context.Background())
 		if err != nil {
@@ -77,41 +181,35 @@ func ClaimFaucet(usdcAddress string) gin.HandlerFunc {
 			return
 		}
 
-		var gasTxHash string
-
-		// 1. If recipient has less than 0.05 WBT, drip 0.05 WBT gas from deployer
-		targetBal, err := client.BalanceAt(context.Background(), targetAddress, nil)
-		if err == nil {
-			minGas := big.NewInt(50000000000000000) // 0.05 WBT
-			if targetBal.Cmp(minGas) < 0 {
-				gasTransfer := big.NewInt(50000000000000000) // 0.05 WBT
-				gasLimit := uint64(21000)
-				tx := types.NewTx(&types.LegacyTx{
-					Nonce:    nonce,
-					To:       &targetAddress,
-					Value:    gasTransfer,
-					Gas:      gasLimit,
-					GasPrice: gasPrice,
-					Data:     nil,
-				})
-				signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
-				if err == nil {
-					if err := client.SendTransaction(context.Background(), signedTx); err == nil {
-						gasTxHash = signedTx.Hash().Hex()
-						nonce++
-					}
-				}
-			}
+		// 2. Transfer 0.05 WBT native gas to recipient (Faucet pays gas)
+		gasTransfer := big.NewInt(50000000000000000) // 0.05 WBT = 5 * 10^16 wei
+		gasTx := types.NewTx(&types.LegacyTx{
+			Nonce:    nonce,
+			To:       &targetAddress,
+			Value:    gasTransfer,
+			Gas:      21000,
+			GasPrice: gasPrice,
+			Data:     nil,
+		})
+		signedGasTx, err := types.SignTx(gasTx, types.NewEIP155Signer(chainID), privateKey)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign gas transfer: " + err.Error()})
+			return
 		}
+		if err := client.SendTransaction(context.Background(), signedGasTx); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send WBT gas: " + err.Error()})
+			return
+		}
+		nonce++
 
-		// 2. Mint 10,000 Mock USDC (10,000 * 10^6)
+		// 3. Mint 10,000 Mock USDC (10,000 * 10^6) to recipient (Faucet pays gas)
 		parsedABI, err := abi.JSON(strings.NewReader(`[{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"}]`))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ABI parse error: " + err.Error()})
 			return
 		}
 
-		mintAmount := big.NewInt(10000000000) // 10,000 USDC with 6 decimals
+		mintAmount := big.NewInt(10000000000) // 10,000 * 10^6
 		data, err := parsedABI.Pack("mint", targetAddress, mintAmount)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ABI pack error: " + err.Error()})
@@ -119,32 +217,44 @@ func ClaimFaucet(usdcAddress string) gin.HandlerFunc {
 		}
 
 		usdcAddr := common.HexToAddress(usdcAddress)
-		gasLimit := uint64(100000)
-		tx := types.NewTx(&types.LegacyTx{
+		usdcTx := types.NewTx(&types.LegacyTx{
 			Nonce:    nonce,
 			To:       &usdcAddr,
 			Value:    big.NewInt(0),
-			Gas:      gasLimit,
+			Gas:      100000,
 			GasPrice: gasPrice,
 			Data:     data,
 		})
-
-		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+		signedUSDCTx, err := types.SignTx(usdcTx, types.NewEIP155Signer(chainID), privateKey)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign USDC mint tx: " + err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign USDC mint: " + err.Error()})
+			return
+		}
+		if err := client.SendTransaction(context.Background(), signedUSDCTx); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send USDC mint: " + err.Error()})
 			return
 		}
 
-		if err := client.SendTransaction(context.Background(), signedTx); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send USDC mint tx: " + err.Error()})
-			return
+		// 4. Save claim in database for 24h rate limiting
+		claimRecord := models.FaucetClaim{
+			Address:    normRecipient,
+			IPAddress:  c.ClientIP(),
+			AmountUSDC: FaucetUSDCAmount,
+			AmountWBT:  fmt.Sprintf("%.2f WBT", FaucetGasAmountWBT),
+			TxHashUSDC: signedUSDCTx.Hash().Hex(),
+			TxHashGas:  signedGasTx.Hash().Hex(),
+			CreatedAt:  time.Now().UTC(),
 		}
+		database.DB.Create(&claimRecord)
 
 		c.JSON(http.StatusOK, gin.H{
 			"success":     true,
-			"message":     "Successfully minted 10,000 Mock USDC to wallet!",
-			"usdc_tx":     signedTx.Hash().Hex(),
-			"gas_drip_tx": gasTxHash,
+			"message":     fmt.Sprintf("Successfully sent %.2f WBT gas and %d Mock USDC to %s!", FaucetGasAmountWBT, FaucetUSDCAmount, recipient),
+			"recipient":   recipient,
+			"usdc_tx":     signedUSDCTx.Hash().Hex(),
+			"gas_tx":      signedGasTx.Hash().Hex(),
+			"faucet_from": fromAddress.Hex(),
+			"cooldown":    "You can request tokens again in 24 hours.",
 		})
 	}
 }

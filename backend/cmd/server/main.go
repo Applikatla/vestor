@@ -102,6 +102,7 @@ func main() {
 		// Company & Verification
 		api.POST("/companies/register", handlers.RegisterCompany)
 		api.POST("/investors/allowlist", handlers.AllowlistInvestor(vaultAddress))
+		api.GET("/faucet/info", handlers.GetFaucetInfo(mockUSDCAddress))
 		api.POST("/faucet", handlers.ClaimFaucet(mockUSDCAddress))
 
 		// Inventory Lifecycle (Input -> Hash -> Stored -> Blockchain Ready)

@@ -53,6 +53,7 @@ func InitDB() *gorm.DB {
 		&models.InventoryItem{},
 		&models.InventoryDocument{},
 		&models.WarehouseEvent{},
+		&models.FaucetClaim{},
 	)
 	if err != nil {
 		log.Fatalf("[DB] Schema migration failed: %v", err)

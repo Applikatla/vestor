@@ -26,7 +26,9 @@ import {
   Coins,
   DollarSign,
   TrendingUp,
-  CreditCard
+  CreditCard,
+  Droplets,
+  Clock
 } from 'lucide-react';
 
 const API_BASE = "http://localhost:8080/api";
@@ -53,6 +55,12 @@ export default function App() {
   // Faucet State
   const [isClaimingFaucet, setIsClaimingFaucet] = useState(false);
   const [faucetSuccessMsg, setFaucetSuccessMsg] = useState("");
+  const [isFaucetModalOpen, setIsFaucetModalOpen] = useState(false);
+  const [faucetRecipientInput, setFaucetRecipientInput] = useState("");
+  const [faucetInfo, setFaucetInfo] = useState(null);
+  const [faucetCheckingEligibility, setFaucetCheckingEligibility] = useState(false);
+  const [faucetEligibilityError, setFaucetEligibilityError] = useState("");
+  const [faucetClaimResult, setFaucetClaimResult] = useState(null);
 
   // Form State (Inventory Input)
   const [warehouseId, setWarehouseId] = useState("WH-MUMBAI-01");
@@ -311,6 +319,87 @@ export default function App() {
         console.error("Direct mint failed:", directErr);
         setErrorMessage(directErr.reason || directErr.message || "Failed to claim Mock USDC");
       }
+    } finally {
+      setIsClaimingFaucet(false);
+    }
+  };
+
+  // Google-Style Faucet Hub Controls
+  const openFaucetModal = (prefillAddr = "") => {
+    const target = prefillAddr || account || "";
+    setFaucetRecipientInput(target);
+    setFaucetClaimResult(null);
+    setFaucetEligibilityError("");
+    setIsFaucetModalOpen(true);
+    fetchFaucetInfo(target);
+  };
+
+  const fetchFaucetInfo = async (addr = "") => {
+    setFaucetCheckingEligibility(true);
+    try {
+      const url = addr ? `${API_BASE}/faucet/info?address=${encodeURIComponent(addr)}` : `${API_BASE}/faucet/info`;
+      const res = await fetch(url);
+      const data = await res.json();
+      setFaucetInfo(data);
+      if (data.eligibility && !data.eligibility.eligible) {
+        const secs = data.eligibility.seconds_remaining;
+        const hrs = Math.floor(secs / 3600);
+        const mins = Math.floor((secs % 3600) / 60);
+        setFaucetEligibilityError(`Daily limit reached for this address. You can request again in ${hrs}h ${mins}m.`);
+      } else {
+        setFaucetEligibilityError("");
+      }
+    } catch (err) {
+      console.error("Failed to load faucet info:", err);
+    } finally {
+      setFaucetCheckingEligibility(false);
+    }
+  };
+
+  const handleExecuteClaimFaucet = async () => {
+    if (!faucetRecipientInput || !ethers.isAddress(faucetRecipientInput)) {
+      setFaucetEligibilityError("Please enter a valid EVM address (0x...)");
+      return;
+    }
+    setIsClaimingFaucet(true);
+    setFaucetEligibilityError("");
+    setFaucetClaimResult(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/faucet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: faucetRecipientInput.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setFaucetEligibilityError(data.error || "Faucet claim failed");
+        return;
+      }
+
+      setFaucetClaimResult(data);
+
+      // If claiming for connected account, refresh wallet balances!
+      if (account && faucetRecipientInput.toLowerCase() === account.toLowerCase()) {
+        const rawProvider = activeProvider || window.ethereum;
+        if (rawProvider) {
+          const provider = new ethers.BrowserProvider(rawProvider);
+          const [bal, usdcContract] = await Promise.all([
+            provider.getBalance(account),
+            new ethers.Contract(deployments.contracts.MockUSDC, MockUSDCArtifact.abi, provider)
+          ]);
+          setBalance(parseFloat(ethers.formatEther(bal)).toFixed(4));
+          const uBal = await usdcContract.balanceOf(account);
+          setUsdcBalance(parseFloat(ethers.formatUnits(uBal, 6)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        }
+      }
+
+      // Refresh eligibility info for cooldown update
+      fetchFaucetInfo(faucetRecipientInput.trim());
+    } catch (err) {
+      console.error("Claim error:", err);
+      setFaucetEligibilityError(err.message || "Failed to dispense from faucet");
     } finally {
       setIsClaimingFaucet(false);
     }
@@ -723,17 +812,15 @@ export default function App() {
 
         {/* Network & Wallet Controls & Faucet */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Faucet Button */}
-          {account && (
-            <button
-              onClick={handleClaimFaucet}
-              disabled={isClaimingFaucet}
-              className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold transition cursor-pointer disabled:opacity-50"
-            >
-              <Coins className={`w-3.5 h-3.5 ${isClaimingFaucet ? 'animate-spin' : ''}`} />
-              {isClaimingFaucet ? "Minting..." : "Faucet: Claim 10k USDC"}
-            </button>
-          )}
+          {/* Google-Style Faucet Button */}
+          <button
+            onClick={() => openFaucetModal(account)}
+            className="flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/30 hover:to-teal-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-semibold transition cursor-pointer shadow-sm shadow-emerald-500/10"
+          >
+            <Droplets className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Testnet Faucet</span>
+            <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">Daily</span>
+          </button>
 
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -822,6 +909,219 @@ export default function App() {
         <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in duration-200">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{faucetSuccessMsg} Ready to invest in inventory tranches!</span>
+        </div>
+      )}
+
+      {/* Google Cloud Web3 Faucet-Style Modal */}
+      {isFaucetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-gradient-to-br from-indigo-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl">
+                  <Droplets className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-white">Whitechain Testnet Faucet</h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Gas Sponsored
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Google Cloud Web3-style testnet token & gas dispenser
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsFaucetModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Faucet Sponsor / Account Info */}
+            <div className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-xl space-y-1.5 text-xs font-mono">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="font-sans text-[11px] uppercase tracking-wider text-slate-500">Faucet Sponsor Account:</span>
+                <span className="text-emerald-400 font-sans text-[10px] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  100% Free for Users
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <a
+                  href={`${EXPLORER_BASE}/address/${faucetInfo?.faucet_address || '0x642D2B8a1de2307a1cab2a7b13d57F018d7C02ae'}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 truncate max-w-[280px]"
+                >
+                  {faucetInfo?.faucet_address || '0x642D2B8a1de2307a1cab2a7b13d57F018d7C02ae'}
+                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                </a>
+                <span className="text-slate-300">
+                  {faucetInfo?.faucet_reserve_wbt || '1.82'} WBT reserve
+                </span>
+              </div>
+            </div>
+
+            {/* Package Allocation Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
+                <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
+                  <Coins className="w-4 h-4" />
+                  <span>Mock USDC</span>
+                </div>
+                <p className="text-lg font-bold text-white mt-1">10,000</p>
+                <p className="text-[10px] text-slate-400">Stablecoin for testing tranches</p>
+              </div>
+
+              <div className="p-3 bg-indigo-500/5 border border-indigo-500/20 rounded-xl">
+                <div className="flex items-center gap-1.5 text-indigo-400 text-xs font-semibold">
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Whitechain Gas</span>
+                </div>
+                <p className="text-lg font-bold text-white mt-1">0.05 WBT</p>
+                <p className="text-[10px] text-slate-400">Native gas for transactions</p>
+              </div>
+            </div>
+
+            {/* Address Input & Paste Controls */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-300">
+                  Recipient EVM Address
+                </label>
+                {account && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFaucetRecipientInput(account);
+                      fetchFaucetInfo(account);
+                    }}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer font-medium"
+                  >
+                    Use Connected Wallet ({account.slice(0, 6)}...{account.slice(-4)})
+                  </button>
+                )}
+              </div>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Paste or enter 0x address..."
+                  value={faucetRecipientInput}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    setFaucetRecipientInput(val);
+                    if (val.length === 42 && val.startsWith("0x")) {
+                      fetchFaucetInfo(val);
+                    }
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500 transition pr-20"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText();
+                      if (text) {
+                        setFaucetRecipientInput(text.trim());
+                        fetchFaucetInfo(text.trim());
+                      }
+                    } catch (e) {
+                      console.log("Clipboard read restricted");
+                    }
+                  }}
+                  className="absolute right-2 top-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] rounded-lg transition cursor-pointer"
+                >
+                  Paste
+                </button>
+              </div>
+
+              {/* Status Notice / Cooldown Warning */}
+              {faucetCheckingEligibility && (
+                <p className="text-[11px] text-slate-400 flex items-center gap-1 font-mono">
+                  <RefreshCw className="w-3 h-3 animate-spin text-slate-500" />
+                  Checking 24h eligibility...
+                </p>
+              )}
+
+              {faucetEligibilityError && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs flex items-start gap-2">
+                  <Clock className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold">{faucetEligibilityError}</p>
+                    <p className="text-[10px] text-amber-400/80 mt-0.5">
+                      Fixed daily policy: 1 claim every 24 hours per recipient address.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Success Display */}
+            {faucetClaimResult && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-2 animate-in fade-in duration-200">
+                <p className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Tokens & Gas Successfully Dispatched!
+                </p>
+                <div className="space-y-1.5 text-xs font-mono pt-1">
+                  <div className="flex justify-between items-center text-slate-400">
+                    <span>10,000 Mock USDC:</span>
+                    <a
+                      href={`${EXPLORER_BASE}/tx/${faucetClaimResult.usdc_tx}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                    >
+                      {faucetClaimResult.usdc_tx.slice(0, 10)}...
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  {faucetClaimResult.gas_tx && (
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>0.05 WBT Gas:</span>
+                      <a
+                        href={`${EXPLORER_BASE}/tx/${faucetClaimResult.gas_tx}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                      >
+                        {faucetClaimResult.gas_tx.slice(0, 10)}...
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                  {faucetClaimResult.cooldown || "Next claim available in 24 hours."}
+                </p>
+              </div>
+            )}
+
+            {/* Claim Action Button */}
+            <button
+              onClick={handleExecuteClaimFaucet}
+              disabled={isClaimingFaucet || !faucetRecipientInput || (faucetInfo?.eligibility && !faucetInfo.eligibility.eligible)}
+              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isClaimingFaucet ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Dispensing 10k USDC & 0.05 WBT (Paying Gas)...
+                </>
+              ) : (
+                <>
+                  <Droplets className="w-4 h-4" />
+                  Request 10,000 USDC + 0.05 WBT
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
