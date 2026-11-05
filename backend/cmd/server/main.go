@@ -104,6 +104,7 @@ func main() {
 		api.POST("/investors/allowlist", handlers.AllowlistInvestor(vaultAddress))
 		api.GET("/faucet/info", handlers.GetFaucetInfo(mockUSDCAddress))
 		api.POST("/faucet", handlers.ClaimFaucet(mockUSDCAddress))
+		api.POST("/faucet/reset", handlers.ResetFaucetCooldown())
 
 		// Inventory Lifecycle (Input -> Hash -> Stored -> Blockchain Ready)
 		api.POST("/inventories", handlers.CreateInventory(registryAddress))

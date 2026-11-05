@@ -15,3 +15,4 @@ type FaucetClaim struct {
 	TxHashGas  string    `json:"tx_hash_gas"`
 	CreatedAt  time.Time `json:"created_at"`
 }
+

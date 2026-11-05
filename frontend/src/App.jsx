@@ -405,6 +405,24 @@ export default function App() {
     }
   };
 
+  const handleResetCooldown = async () => {
+    if (!faucetRecipientInput) return;
+    try {
+      const res = await fetch(`${API_BASE}/faucet/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: faucetRecipientInput.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFaucetEligibilityError("");
+        fetchFaucetInfo(faucetRecipientInput.trim());
+      }
+    } catch (e) {
+      console.error("Reset error:", e);
+    }
+  };
+
   const switchAccount = async () => {
     if (!activeProvider) return;
     try {
@@ -1050,14 +1068,23 @@ export default function App() {
               )}
 
               {faucetEligibilityError && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs flex items-start gap-2">
-                  <Clock className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold">{faucetEligibilityError}</p>
-                    <p className="text-[10px] text-amber-400/80 mt-0.5">
-                      Fixed daily policy: 1 claim every 24 hours per recipient address.
-                    </p>
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2">
+                    <Clock className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold">{faucetEligibilityError}</p>
+                      <p className="text-[10px] text-amber-400/80 mt-0.5">
+                        Fixed daily policy: 1 claim every 24 hours per recipient address.
+                      </p>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleResetCooldown}
+                    className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg text-[10px] font-medium transition cursor-pointer flex-shrink-0 whitespace-nowrap"
+                  >
+                    Reset Cooldown (Demo)
+                  </button>
                 </div>
               )}
             </div>

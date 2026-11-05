@@ -258,3 +258,22 @@ func ClaimFaucet(usdcAddress string) gin.HandlerFunc {
 		})
 	}
 }
+
+// ResetFaucetCooldown allows testnet / demo wallets to reset their cooldown immediately
+func ResetFaucetCooldown() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req FaucetRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed: " + err.Error()})
+			return
+		}
+
+		normAddr := strings.ToLower(strings.TrimSpace(req.Address))
+		database.DB.Where("LOWER(address) = ?", normAddr).Delete(&models.FaucetClaim{})
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": fmt.Sprintf("Daily cooldown reset for %s. You can claim again immediately.", req.Address),
+		})
+	}
+}
