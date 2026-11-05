@@ -214,12 +214,23 @@ export default function App() {
       }
 
       if (rawProvider.on) {
-        rawProvider.on("accountsChanged", (newAccounts) => {
+        rawProvider.on("accountsChanged", async (newAccounts) => {
           if (newAccounts.length === 0) {
             disconnectWallet();
           } else {
-            setAccount(newAccounts[0]);
-            fetchUsdcBalance(newAccounts[0], browserProvider);
+            const nextAccount = newAccounts[0];
+            setAccount(nextAccount);
+            try {
+              const [bal, usdcContract] = await Promise.all([
+                browserProvider.getBalance(nextAccount),
+                new ethers.Contract(deployments.contracts.MockUSDC, MockUSDCArtifact.abi, browserProvider)
+              ]);
+              setBalance(parseFloat(ethers.formatEther(bal)).toFixed(4));
+              const uBal = await usdcContract.balanceOf(nextAccount);
+              setUsdcBalance(parseFloat(ethers.formatUnits(uBal, 6)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            } catch (err) {
+              console.error("Account update balance error:", err);
+            }
           }
         });
         rawProvider.on("chainChanged", () => {
@@ -234,7 +245,7 @@ export default function App() {
     }
   };
 
-  // Claim 10,000 Mock USDC from Faucet
+  // Claim 10,000 Mock USDC from Faucet (Gasless via Backend + Auto Gas Drip)
   const handleClaimFaucet = async () => {
     if (!account) {
       setIsWalletModalOpen(true);
@@ -245,27 +256,61 @@ export default function App() {
     setFaucetSuccessMsg("");
 
     try {
+      // 1. Gasless faucet call via platform backend (platform pays gas & drips testnet WBT if needed)
+      const res = await fetch(`${API_BASE}/faucet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: account }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Backend faucet failed");
+      }
+
+      // 2. Refresh balances
       const rawProvider = activeProvider || window.ethereum;
       const provider = new ethers.BrowserProvider(rawProvider);
-      const signer = await provider.getSigner();
+      const [bal, usdcContract] = await Promise.all([
+        provider.getBalance(account),
+        new ethers.Contract(deployments.contracts.MockUSDC, MockUSDCArtifact.abi, provider)
+      ]);
+      setBalance(parseFloat(ethers.formatEther(bal)).toFixed(4));
+      const uBal = await usdcContract.balanceOf(account);
+      setUsdcBalance(parseFloat(ethers.formatUnits(uBal, 6)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
-      const usdcContract = new ethers.Contract(
-        deployments.contracts.MockUSDC,
-        MockUSDCArtifact.abi,
-        signer
-      );
-
-      console.log("Minting 10,000 Mock USDC to:", account);
-      const mintAmount = ethers.parseUnits("10000", 6);
-      const tx = await usdcContract.mint(account, mintAmount);
-      await tx.wait();
-
-      await fetchUsdcBalance(account, provider);
-      setFaucetSuccessMsg("🎉 Successfully received 10,000 Mock USDC!");
-      setTimeout(() => setFaucetSuccessMsg(""), 5000);
+      setFaucetSuccessMsg("🎉 Successfully received 10,000 Mock USDC (and testnet WBT gas)!");
+      setTimeout(() => setFaucetSuccessMsg(""), 6000);
     } catch (err) {
-      console.error("Faucet claim error:", err);
-      setErrorMessage(err.reason || err.message || "Failed to claim Mock USDC");
+      console.warn("Gasless faucet fallback to direct on-chain mint:", err);
+      try {
+        const rawProvider = activeProvider || window.ethereum;
+        const provider = new ethers.BrowserProvider(rawProvider);
+        const signer = await provider.getSigner();
+
+        const usdcContract = new ethers.Contract(
+          deployments.contracts.MockUSDC,
+          MockUSDCArtifact.abi,
+          signer
+        );
+
+        const mintAmount = ethers.parseUnits("10000", 6);
+        const tx = await usdcContract.mint(account, mintAmount);
+        await tx.wait();
+
+        const [bal, uBal] = await Promise.all([
+          provider.getBalance(account),
+          usdcContract.balanceOf(account)
+        ]);
+        setBalance(parseFloat(ethers.formatEther(bal)).toFixed(4));
+        setUsdcBalance(parseFloat(ethers.formatUnits(uBal, 6)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+        setFaucetSuccessMsg("🎉 Successfully minted 10,000 Mock USDC!");
+        setTimeout(() => setFaucetSuccessMsg(""), 6000);
+      } catch (directErr) {
+        console.error("Direct mint failed:", directErr);
+        setErrorMessage(directErr.reason || directErr.message || "Failed to claim Mock USDC");
+      }
     } finally {
       setIsClaimingFaucet(false);
     }

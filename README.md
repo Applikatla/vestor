@@ -98,3 +98,4 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 4. **Deploy ERC20 Token**: Deploy a dedicated fractional token via `ContractFactory` and register the tranche in `FinancingVault`.
 5. **Faucet & Invest**: Claim testnet USDC via the built-in faucet, approve allowance, and deposit funds to receive minted `InventoryERC20` tokens.
 6. **Telemetry & Settlement**: Simulate off-chain warehouse dispatches and settle repayments.
+
