@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { connectWallet, formatAddress } from "../lib/web3";
-import { SEPOLIA_CONTRACTS, MOCK_USDC_ABI } from "../lib/contracts";
+import { SEPOLIA_CONTRACTS, MOCK_USDC_ABI, USDT_ABI } from "../lib/contracts";
 import { ethers } from "ethers";
 import {
   Layers,
@@ -20,7 +20,7 @@ import {
 export function Navbar() {
   const [account, setAccount] = useState<string>("");
   const [chainId, setChainId] = useState<number | null>(null);
-  const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
+  const [usdtBalance, setUsdtBalance] = useState<string | null>(null);
   const [isWrongNetwork, setIsWrongNetwork] = useState(false);
   const pathname = usePathname();
 
@@ -34,11 +34,27 @@ export function Navbar() {
         setIsWrongNetwork(cid !== SEPOLIA_CONTRACTS.chainId);
 
         if (cid === SEPOLIA_CONTRACTS.chainId) {
-          const usdc = new ethers.Contract(SEPOLIA_CONTRACTS.MockUSDC, MOCK_USDC_ABI, provider);
-          const bal = await usdc.balanceOf(addr);
-          setUsdcBalance(parseFloat(ethers.formatUnits(bal, 6)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+          try {
+            // First try official Whitechain USDT
+            const usdt = new ethers.Contract(SEPOLIA_CONTRACTS.USDT, USDT_ABI, provider);
+            const bal = await usdt.balanceOf(addr);
+            if (bal > 0n) {
+              setUsdtBalance(parseFloat(ethers.formatUnits(bal, 6)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " USDT");
+            } else {
+              // Check fallback mock token
+              const mock = new ethers.Contract(SEPOLIA_CONTRACTS.MockUSDC, MOCK_USDC_ABI, provider);
+              const mockBal = await mock.balanceOf(addr);
+              if (mockBal > 0n) {
+                setUsdtBalance(parseFloat(ethers.formatUnits(mockBal, 6)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MOCK");
+              } else {
+                setUsdtBalance("0.00 USDT");
+              }
+            }
+          } catch {
+            setUsdtBalance("0.00 USDT");
+          }
         } else {
-          setUsdcBalance(null);
+          setUsdtBalance(null);
         }
       }
     } catch (e) {
@@ -64,7 +80,7 @@ export function Navbar() {
           loadUserData(accounts[0]);
         } else {
           setAccount("");
-          setUsdcBalance(null);
+          setUsdtBalance(null);
         }
       });
 
@@ -185,6 +201,17 @@ export function Navbar() {
 
         {/* Right: Wallet & Account Information */}
         <div className="flex items-center gap-3">
+          <a
+            href={SEPOLIA_CONTRACTS.faucetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1.5 rounded-lg transition-colors shadow-2xs"
+            title="Claim testnet WBT & official USDT from Whitechain faucet"
+          >
+            <span>Faucet</span>
+            <ExternalLink className="w-3 h-3 text-slate-400" />
+          </a>
+
           {account && isWrongNetwork && (
             <button
               onClick={handleSwitchNetwork}
@@ -197,10 +224,10 @@ export function Navbar() {
 
           {account ? (
             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-xs font-mono">
-              {usdcBalance !== null && (
+              {usdtBalance !== null && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white border border-slate-200 text-slate-900 font-semibold tabular-nums">
                   <Coins className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>${usdcBalance} USDC</span>
+                  <span>${usdtBalance}</span>
                 </div>
               )}
               <div className="flex items-center gap-1.5 px-2 text-slate-700">

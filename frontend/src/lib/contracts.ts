@@ -3,11 +3,14 @@ export const WHITECHAIN_SEPOLIA_CONTRACTS = {
   networkName: "Whitechain Sepolia",
   rpcUrl: "https://rpc.testnet.whitechain.io",
   explorerUrl: "https://explorer.testnet.whitechain.io",
+  faucetUrl: "https://faucet.testnet.whitechain.io",
   AccessController: "0xD22E553477bb586c19Eb50E5b215bCE66A65111B",
   InventoryRegistry: "0xE85562e518a84c63330Ca7f7E67EC29Aa4ade09D",
   InventoryTokenFactory: "0xEBC9D0006b1f35cB6BAFe18624A03f7fad6980Dc",
   SalesSettlement: "0x01ED64dCD39E76fb5e947f65165D9cA3454F483E",
   DistributionManager: "0xfd3Cb1A31f54b6DDCCa778fE6E15C346EF5d38F3",
+  // Official Whitechain Sepolia USDT token (required for Whitechain hackathon tracks)
+  USDT: "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7",
   MockUSDC: "0x100F1843Bf91962349cE9C84F45ae6581Eb72B61",
 };
 
@@ -20,6 +23,17 @@ export const REGISTRY_ABI = [
   "function inventories(bytes32) view returns (bytes32 inventoryId, address issuer, bytes32 evidenceRoot, uint64 registeredAt, uint8 status)",
   "function getEvidenceHistory(bytes32 inventoryId) view returns (bytes32[])",
   "event InventoryRegistered(bytes32 indexed inventoryId, address indexed issuer, bytes32 evidenceRoot, uint64 registeredAt)",
+];
+
+export const USDT_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address owner) view returns (uint256)",
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function transfer(address to, uint256 amount) external returns (bool)",
 ];
 
 export const MOCK_USDC_ABI = [

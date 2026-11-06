@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { SEPOLIA_CONTRACTS, MOCK_USDC_ABI, DISTRIBUTION_MANAGER_ABI } from "../../lib/contracts";
+import { SEPOLIA_CONTRACTS, MOCK_USDC_ABI, USDT_ABI, DISTRIBUTION_MANAGER_ABI } from "../../lib/contracts";
 import { connectWallet, formatAddress } from "../../lib/web3";
 import { useToast } from "../../components/Toast";
 import {
@@ -103,6 +103,19 @@ export default function InvestorPortal() {
     try {
       if (typeof window !== "undefined" && window.ethereum) {
         const provider = new ethers.BrowserProvider(window.ethereum);
+        try {
+          // Query official Whitechain USDT first
+          const usdt = new ethers.Contract(SEPOLIA_CONTRACTS.USDT, USDT_ABI, provider);
+          const bal = await usdt.balanceOf(addr);
+          if (bal > 0n) {
+            setUsdcBalance(parseFloat(ethers.formatUnits(bal, 6)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            return;
+          }
+        } catch (e) {
+          console.warn("Official USDT balance lookup:", e);
+        }
+
+        // Fallback to test mock token if 0
         const usdc = new ethers.Contract(SEPOLIA_CONTRACTS.MockUSDC, MOCK_USDC_ABI, provider);
         const bal = await usdc.balanceOf(addr);
         setUsdcBalance(parseFloat(ethers.formatUnits(bal, 6)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -180,7 +193,7 @@ export default function InvestorPortal() {
     }
   };
 
-  // Subscribe to Offering on Whitechain Sepolia
+  // Subscribe to Offering on Whitechain Sepolia using Official USDT
   const handleSubscribe = async () => {
     if (!account) return handleConnect();
     if (!selectedVault) return;
@@ -188,28 +201,38 @@ export default function InvestorPortal() {
 
     addToast({
       type: "loading",
-      title: "Authorizing Subscription",
-      description: `Funding $${investAmount} USDC to ${selectedVault.ticker}...`,
+      title: "Authorizing USDT Settlement",
+      description: `Funding $${investAmount} USDT on Whitechain to ${selectedVault.ticker}...`,
     });
 
     try {
       const conn = await connectWallet();
       if (!conn) return;
 
-      const usdc = new ethers.Contract(SEPOLIA_CONTRACTS.MockUSDC, MOCK_USDC_ABI, conn.signer);
       const amount = ethers.parseUnits(investAmount, 6);
+      let tx;
+      let usedToken = "USDT";
 
-      const tx = await usdc.approve(SEPOLIA_CONTRACTS.DistributionManager, amount);
+      // Attempt interaction with official Whitechain USDT contract (0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7)
+      try {
+        const usdt = new ethers.Contract(SEPOLIA_CONTRACTS.USDT, USDT_ABI, conn.signer);
+        tx = await usdt.approve(SEPOLIA_CONTRACTS.DistributionManager, amount);
+      } catch (err: any) {
+        console.warn("USDT approve fallback to MockUSDC:", err);
+        const usdc = new ethers.Contract(SEPOLIA_CONTRACTS.MockUSDC, MOCK_USDC_ABI, conn.signer);
+        tx = await usdc.approve(SEPOLIA_CONTRACTS.DistributionManager, amount);
+        usedToken = "MockUSDC";
+      }
+
       const receipt = await tx.wait(1);
-
       await fetchBalance(conn.address);
 
       const units = (Number(investAmount) / selectedVault.tokenPrice).toFixed(2);
 
       addToast({
         type: "success",
-        title: "Subscription Confirmed",
-        description: `Allocated ${units} tokens for $${investAmount} USDC.`,
+        title: "Subscription Confirmed on Whitechain",
+        description: `Approved $${investAmount} ${usedToken} settlement for ${units} vault units.`,
         txHash: tx.hash,
       });
 
@@ -276,22 +299,34 @@ export default function InvestorPortal() {
           </p>
         </div>
 
-        {/* 1-Click Faucet Button */}
-        <button
-          onClick={handleMintUSDC}
-          disabled={loading}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-sm cursor-pointer disabled:opacity-50"
-        >
-          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Droplets className="w-3.5 h-3.5" />}
-          <span>Request 10,000 MockUSDC</span>
-        </button>
+        {/* Faucet Controls */}
+        <div className="flex items-center gap-2">
+          <a
+            href={SEPOLIA_CONTRACTS.faucetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+            title="Claim official USDT testnet tokens from Whitechain faucet"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+            <span>Whitechain USDT Faucet</span>
+          </a>
+          <button
+            onClick={handleMintUSDC}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Droplets className="w-3.5 h-3.5" />}
+            <span>Quick Mint (Mock)</span>
+          </button>
+        </div>
       </div>
 
       {/* Portfolio Treasury Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           {
-            label: "Available Cash (MockUSDC)",
+            label: "Available Settlement Cash (USDT)",
             value: `$${usdcBalance}`,
             sub: "Ready to deploy",
           },
@@ -536,9 +571,19 @@ export default function InvestorPortal() {
 
             <div className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Subscription Allocation (MockUSDC)
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-slate-700 font-semibold">
+                    Subscription Allocation (USDT)
+                  </label>
+                  <a
+                    href={`https://explorer.testnet.whitechain.io/address/${SEPOLIA_CONTRACTS.USDT}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1 font-mono"
+                  >
+                    USDT: 0xcedfB...55a7 <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
                 <div className="relative">
                   <input
                     type="number"
@@ -568,7 +613,7 @@ export default function InvestorPortal() {
                 <div className="flex justify-between text-slate-600">
                   <span>Estimated Total Coupon Return:</span>
                   <span className="text-emerald-700 font-bold">
-                    +${((Number(investAmount) * selectedVault.apy * selectedVault.termDays) / (365 * 100)).toFixed(2)} USDC
+                    +${((Number(investAmount) * selectedVault.apy * selectedVault.termDays) / (365 * 100)).toFixed(2)} USDT
                   </span>
                 </div>
               </div>
@@ -586,7 +631,7 @@ export default function InvestorPortal() {
                 ) : (
                   <>
                     <Lock className="w-3.5 h-3.5" />
-                    Confirm Subscription & Authorize ${investAmount} USDC
+                    Confirm Subscription & Authorize ${investAmount} USDT
                   </>
                 )}
               </button>

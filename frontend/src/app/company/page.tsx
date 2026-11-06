@@ -566,7 +566,7 @@ export default function CompanyPortal() {
 
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">
-                  Target Debt Facility ($ USDC)
+                  Target Debt Facility ($ USDT)
                 </label>
                 <input
                   type="number"
@@ -593,7 +593,7 @@ export default function CompanyPortal() {
               <div className="flex justify-between text-slate-600">
                 <span>Denominated Unit Issue Price:</span>
                 <span className="font-bold text-slate-900">
-                  ${(Number(offerTargetUSD) / Number(tokenSupply)).toFixed(2)} USDC / Token
+                  ${(Number(offerTargetUSD) / Number(tokenSupply)).toFixed(2)} USDT / Token
                 </span>
               </div>
               <div className="flex justify-between text-slate-600">
@@ -812,13 +812,13 @@ export default function CompanyPortal() {
               <div className="flex justify-between text-slate-600">
                 <span>Invoiced Gross Proceeds:</span>
                 <span className="font-bold text-slate-900">
-                  ${(Number(saleQuantity) * Number(grossSalePrice)).toLocaleString("en-US", { minimumFractionDigits: 2 })} USDC
+                  ${(Number(saleQuantity) * Number(grossSalePrice)).toLocaleString("en-US", { minimumFractionDigits: 2 })} USDT
                 </span>
               </div>
               <div className="flex justify-between text-emerald-700">
                 <span>Net Cash Routed to Senior Tranche Waterfall:</span>
                 <span className="font-bold">
-                  ${(Number(saleQuantity) * Number(grossSalePrice) * 0.95).toLocaleString("en-US", { minimumFractionDigits: 2 })} USDC
+                  ${(Number(saleQuantity) * Number(grossSalePrice) * 0.95).toLocaleString("en-US", { minimumFractionDigits: 2 })} USDT
                 </span>
               </div>
             </div>

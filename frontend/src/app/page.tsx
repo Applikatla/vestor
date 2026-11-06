@@ -114,9 +114,15 @@ export default function Home() {
       address: SEPOLIA_CONTRACTS.AccessController,
     },
     {
-      name: "MockUSDC (Stablecoin)",
-      role: "Settlement Currency",
-      desc: "6-decimal payment token for credit facility draws, subscriptions, and yield claims.",
+      name: "Official Tether USD (USDT)",
+      role: "Canonical Settlement Currency",
+      desc: "Official Whitechain Sepolia USDT token (6 decimals) used for all subscription debt settlements, draws, and waterfall distributions.",
+      address: SEPOLIA_CONTRACTS.USDT,
+    },
+    {
+      name: "MockUSDC (Simulation Token)",
+      role: "Secondary Faucet Currency",
+      desc: "Self-mintable 6-decimal payment token for testnet sandbox and mock liquidity tests.",
       address: SEPOLIA_CONTRACTS.MockUSDC,
     },
   ];
