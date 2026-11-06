@@ -1,0 +1,13 @@
+{
+  "network": "whitechainSepolia",
+  "chainId": 1874,
+  "deployedAt": "2026-11-05T23:43:53.820Z",
+  "contracts": {
+    "AccessController": "0xD22E553477bb586c19Eb50E5b215bCE66A65111B",
+    "InventoryRegistry": "0xE85562e518a84c63330Ca7f7E67EC29Aa4ade09D",
+    "InventoryTokenFactory": "0xEBC9D0006b1f35cB6BAFe18624A03f7fad6980Dc",
+    "SalesSettlement": "0x01ED64dCD39E76fb5e947f65165D9cA3454F483E",
+    "DistributionManager": "0xfd3Cb1A31f54b6DDCCa778fE6E15C346EF5d38F3",
+    "MockUSDC": "0x100F1843Bf91962349cE9C84F45ae6581Eb72B61"
+  }
+}
