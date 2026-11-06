@@ -261,7 +261,7 @@ export default function InvestorPortal() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Institutional Fixed-Income Orderbook & Allocation Desk
           </h1>
           <p className="text-slate-500 text-xs mt-1">
@@ -270,7 +270,7 @@ export default function InvestorPortal() {
         </div>
 
         {/* Faucet Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <a
             href={SEPOLIA_CONTRACTS.faucetUrl}
             target="_blank"
@@ -293,7 +293,7 @@ export default function InvestorPortal() {
       </div>
 
       {/* Portfolio Treasury Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           {
             label: "Available Settlement Cash (USDT)",
@@ -318,15 +318,18 @@ export default function InvestorPortal() {
         ].map((item, idx) => (
           <div
             key={idx}
-            className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-1.5"
+            className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-1.5 min-w-0"
           >
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block truncate">
               {item.label}
             </span>
-            <div className="text-xl font-bold text-slate-900 font-mono tracking-tight tabular-nums">
+            <div
+              className="text-lg sm:text-xl font-bold text-slate-900 font-mono tracking-tight tabular-nums truncate"
+              title={item.value}
+            >
               {item.value}
             </div>
-            <span className="text-[11px] text-slate-500 font-medium block">
+            <span className="text-[11px] text-slate-500 font-medium block truncate">
               {item.sub}
             </span>
           </div>
@@ -334,7 +337,7 @@ export default function InvestorPortal() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center justify-between gap-4 pt-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
         <div>
           <h2 className="text-sm font-bold text-slate-900">
             Primary Credit Facility Offerings
@@ -344,7 +347,7 @@ export default function InvestorPortal() {
           </p>
         </div>
 
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold overflow-x-auto no-scrollbar max-w-full shrink-0">
           {[
             { id: "ALL", label: "All Tranches" },
             { id: "SENIOR", label: "Senior Secured (11%-13%)" },
@@ -353,7 +356,7 @@ export default function InvestorPortal() {
             <button
               key={tab.id}
               onClick={() => setActiveFilter(tab.id as any)}
-              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer shrink-0 ${
                 activeFilter === tab.id
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
@@ -368,7 +371,7 @@ export default function InvestorPortal() {
       {/* Facilities Orderbook Table */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[800px] whitespace-nowrap">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
                 <th className="py-3 px-4">Ticker</th>
@@ -444,8 +447,8 @@ export default function InvestorPortal() {
       </div>
 
       {/* Yield Waterfall & Claims Desk */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 space-y-4">
-        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-5 space-y-4">
+        <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold text-slate-900">
               Distribution Claims Desk (DistributionManager)
@@ -454,13 +457,13 @@ export default function InvestorPortal() {
               Pull-based Merkle snapshot distributions settled from commercial warehouse sales.
             </p>
           </div>
-          <span className="text-[11px] font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+          <span className="text-[11px] font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-200 self-start sm:self-auto">
             Contract: {formatAddress(SEPOLIA_CONTRACTS.DistributionManager)}
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
+          <table className="w-full text-left text-xs font-mono min-w-[640px] whitespace-nowrap">
             <thead>
               <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-semibold bg-slate-50/70">
                 <th className="py-2.5 px-4">Distribution Ref</th>

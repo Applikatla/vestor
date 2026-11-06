@@ -17,11 +17,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-slate-900 selection:text-white">
+      <body className="antialiased min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-slate-900 selection:text-white overflow-x-hidden">
         <ToastProvider>
           <Web3Provider>
             <Navbar />
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 min-w-0">
               {children}
             </main>
             <Footer />

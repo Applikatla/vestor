@@ -462,7 +462,7 @@ export default function CompanyPortal() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Borrower Loan Origination & Asset Console
           </h1>
           <p className="text-slate-500 text-xs mt-1">
@@ -470,7 +470,7 @@ export default function CompanyPortal() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {account ? (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-mono text-emerald-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -487,12 +487,14 @@ export default function CompanyPortal() {
             </button>
           )}
 
-          <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-mono">
+          <div className="flex items-center gap-3 sm:gap-4 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-mono">
             <div>
               <span className="text-slate-400 text-[10px] uppercase tracking-wider block font-sans">
                 Entity
               </span>
-              <span className="font-bold text-slate-800">Apex Commodity Trading Ltd</span>
+              <span className="font-bold text-slate-800 truncate max-w-[140px] sm:max-w-none block">
+                Apex Commodity Trading Ltd
+              </span>
             </div>
             <div className="pl-3 border-l border-slate-200">
               <span className="text-slate-400 text-[10px] uppercase tracking-wider block font-sans">
@@ -505,7 +507,7 @@ export default function CompanyPortal() {
       </div>
 
       {/* Workflow Tabs */}
-      <div className="flex border-b border-slate-200 gap-2">
+      <div className="flex border-b border-slate-200 gap-1 sm:gap-2 overflow-x-auto no-scrollbar pb-px flex-nowrap whitespace-nowrap">
         {[
           { id: "onboard", label: "1. Asset Ingestion & Evidence", icon: Package },
           { id: "issue", label: "2. Token Launchpad", icon: Coins },
@@ -518,14 +520,14 @@ export default function CompanyPortal() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 py-2.5 px-4 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 -mb-[1px] ${
+              className={`flex items-center gap-2 py-2.5 px-3 sm:px-4 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 -mb-[1px] shrink-0 ${
                 isActive
                   ? "border-slate-900 text-slate-900 bg-white font-bold"
                   : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/50"
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
-              {tab.label}
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span>{tab.label}</span>
             </button>
           );
         })}
@@ -895,7 +897,7 @@ export default function CompanyPortal() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[780px] whitespace-nowrap">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
                   <th className="py-3 px-4">Lot Reference</th>

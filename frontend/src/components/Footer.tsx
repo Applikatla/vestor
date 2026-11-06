@@ -23,11 +23,11 @@ export function Footer() {
             <p className="text-slate-600 text-xs leading-relaxed max-w-md">
               Enterprise real-world asset credit facility and continuous settlement desk. Enables corporate inventory holders to tokenize physical warehouse positions, borrow non-dilutive stablecoin working capital, and settle repayments under deterministic 5-tier waterfall smart contract rules.
             </p>
-            <div className="flex items-center gap-4 text-[11px] font-mono text-slate-500 pt-1">
+            <div className="flex items-center gap-3 sm:gap-4 text-[11px] font-mono text-slate-500 pt-1 flex-wrap">
               <span>EVM Target: Cancun</span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>Settlement Layer: Whitechain Sepolia (1874)</span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>Evidence: SHA-256 Merkle Roots</span>
             </div>
           </div>
@@ -126,13 +126,13 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-4">
+        <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-4 text-center sm:text-left">
           <p>© 2026 InventoryCredit Protocol. Enterprise Real-World Asset (RWA) Architecture.</p>
-          <div className="flex items-center gap-4 font-mono">
+          <div className="flex items-center gap-3 sm:gap-4 font-mono flex-wrap justify-center sm:justify-end">
             <span>Deterministic Double-Entry Ledger</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <span>2.1s Block Finality</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <span>Audit-Verified</span>
           </div>
         </div>

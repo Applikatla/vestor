@@ -133,7 +133,7 @@ export default function Home() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Institutional Credit Portfolio & Facilities
           </h1>
           <p className="text-slate-500 text-xs mt-1">
@@ -141,7 +141,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <Link
             href="/company"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
@@ -160,7 +160,7 @@ export default function Home() {
       </div>
 
       {/* High-Density Treasury Metrics Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {[
           {
             label: "Total Facility Commitment",
@@ -190,15 +190,18 @@ export default function Home() {
         ].map((metric, i) => (
           <div
             key={i}
-            className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-1.5"
+            className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-1.5 min-w-0"
           >
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block truncate">
               {metric.label}
             </span>
-            <div className="text-xl font-bold text-slate-900 font-mono tracking-tight tabular-nums">
+            <div
+              className="text-lg sm:text-xl font-bold text-slate-900 font-mono tracking-tight tabular-nums truncate"
+              title={metric.value}
+            >
               {metric.value}
             </div>
-            <span className="text-[11px] text-slate-500 font-medium block">
+            <span className="text-[11px] text-slate-500 font-medium block truncate">
               {metric.sub}
             </span>
           </div>
@@ -207,7 +210,7 @@ export default function Home() {
 
       {/* Active Facilities Table (Institutional Ledger) */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold text-slate-900">
               Active Warehouse Credit Facilities
@@ -216,13 +219,13 @@ export default function Home() {
               Live borrowing facilities secured by verified physical inventory lots on Whitechain Sepolia.
             </p>
           </div>
-          <span className="text-xs font-mono text-slate-500 bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
+          <span className="text-xs font-mono text-slate-500 bg-slate-50 px-2.5 py-1 rounded border border-slate-200 self-start sm:self-auto">
             3 Facilities Listed
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[840px] whitespace-nowrap">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
                 <th className="py-3 px-4">Facility ID</th>
