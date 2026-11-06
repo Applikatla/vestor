@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 export default function CompanyPortal() {
-  const { addToast } = useToast();
+  const { addToast, removeToast } = useToast();
   const { account, connect, connecting, refreshBalance } = useWeb3();
   const [activeTab, setActiveTab] = useState<"onboard" | "issue" | "positions" | "sales">("onboard");
   const [loading, setLoading] = useState(false);
@@ -119,10 +119,10 @@ export default function CompanyPortal() {
     e.preventDefault();
     setLoading(true);
 
-    addToast({
+    const loadId = addToast({
       type: "loading",
       title: "Submitting to Whitechain Sepolia",
-      description: "Writing inventory commitment & canonical SHA-256 evidence root...",
+      description: "Confirm transaction in MetaMask or awaiting Whitechain block...",
     });
 
     try {
@@ -130,25 +130,16 @@ export default function CompanyPortal() {
       if (!conn) {
         const addr = await connect();
         if (!addr) {
+          removeToast(loadId);
           setLoading(false);
           return;
         }
         conn = await connectWallet();
         if (!conn) {
+          removeToast(loadId);
           setLoading(false);
           return;
         }
-      }
-
-      // Auto-provision REGISTRAR_ROLE if needed
-      try {
-        await fetch("/api/provision-role", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ targetAddress: conn.address }),
-        });
-      } catch (e) {
-        console.warn("Auto-provision check:", e);
       }
 
       // Compute deterministic 32-byte inventory ID and evidence root
@@ -201,6 +192,7 @@ export default function CompanyPortal() {
       };
       setPositionsList([newPos, ...positionsList]);
 
+      removeToast(loadId);
       addToast({
         type: "success",
         title: "Inventory Commitment Recorded",
@@ -212,6 +204,7 @@ export default function CompanyPortal() {
       setActiveTab("issue");
     } catch (err: any) {
       console.error(err);
+      removeToast(loadId);
       addToast({
         type: "error",
         title: "Registration Failed",
@@ -226,10 +219,10 @@ export default function CompanyPortal() {
   const handleDeployToken = async () => {
     setLoading(true);
 
-    addToast({
+    const loadId = addToast({
       type: "loading",
       title: "Deploying ERC-20 Token Contract",
-      description: "Calling InventoryTokenFactory on Whitechain Sepolia...",
+      description: "Confirm transaction in MetaMask or awaiting Whitechain block...",
     });
 
     try {
@@ -237,11 +230,13 @@ export default function CompanyPortal() {
       if (!conn) {
         const addr = await connect();
         if (!addr) {
+          removeToast(loadId);
           setLoading(false);
           return;
         }
         conn = await connectWallet();
         if (!conn) {
+          removeToast(loadId);
           setLoading(false);
           return;
         }
@@ -292,6 +287,7 @@ export default function CompanyPortal() {
 
       setDeployedTokenAddr(deployedAddr);
 
+      removeToast(loadId);
       addToast({
         type: "success",
         title: "Token Contract Deployed",
@@ -302,6 +298,7 @@ export default function CompanyPortal() {
       setActiveTab("positions");
     } catch (err: any) {
       console.error(err);
+      removeToast(loadId);
       addToast({
         type: "error",
         title: "Deployment Failed",
@@ -316,10 +313,10 @@ export default function CompanyPortal() {
   const handleAttestSale = async () => {
     setLoading(true);
 
-    addToast({
+    const loadId = addToast({
       type: "loading",
       title: "Authorizing EIP-712 Attestation",
-      description: "Signing and broadcasting off-take sale on Whitechain...",
+      description: "Sign typed data in MetaMask or awaiting Whitechain block...",
     });
 
     try {
@@ -327,11 +324,13 @@ export default function CompanyPortal() {
       if (!conn) {
         const addr = await connect();
         if (!addr) {
+          removeToast(loadId);
           setLoading(false);
           return;
         }
         conn = await connectWallet();
         if (!conn) {
+          removeToast(loadId);
           setLoading(false);
           return;
         }
@@ -436,6 +435,7 @@ export default function CompanyPortal() {
         blockNumber = data.blockNumber || 12401500;
       }
 
+      removeToast(loadId);
       addToast({
         type: "success",
         title: "Sales Attestation Confirmed",
@@ -446,6 +446,7 @@ export default function CompanyPortal() {
       refreshBalance().catch(() => {});
     } catch (err: any) {
       console.error(err);
+      removeToast(loadId);
       addToast({
         type: "error",
         title: "Attestation Error",

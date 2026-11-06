@@ -16,6 +16,7 @@ interface ToastContextType {
   addToast: (toast: Omit<ToastMessage, "id">) => string;
   removeToast: (id: string) => void;
   updateToast: (id: string, updates: Partial<ToastMessage>) => void;
+  clearAllToasts: () => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -23,35 +24,48 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const addToast = (toast: Omit<ToastMessage, "id">): string => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { ...toast, id }]);
-
-    if (toast.type !== "loading") {
-      setTimeout(() => {
-        removeToast(id);
-      }, 7000);
-    }
-    return id;
-  };
-
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const clearAllToasts = () => {
+    setToasts([]);
+  };
+
+  const addToast = (toast: Omit<ToastMessage, "id">): string => {
+    const id = Math.random().toString(36).substring(2, 9);
+    
+    // Cap visible toasts to maximum 3 to prevent screen overflow
+    setToasts((prev) => {
+      const filtered = toast.type === "loading" 
+        ? prev.filter((t) => t.type !== "loading") // Remove existing loading spinners when new one starts
+        : prev;
+      return [...filtered.slice(-2), { ...toast, id }];
+    });
+
+    // Auto-remove timeouts:
+    // Success / Info / Error: 6 seconds
+    // Loading safety timeout: 15 seconds (so a stuck network call never leaves a permanent spinner)
+    const timeoutMs = toast.type === "loading" ? 15000 : 6000;
+    setTimeout(() => {
+      removeToast(id);
+    }, timeoutMs);
+
+    return id;
   };
 
   const updateToast = (id: string, updates: Partial<ToastMessage>) => {
     setToasts((prev) =>
       prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
     );
-    if (updates.type && updates.type !== "loading") {
-      setTimeout(() => {
-        removeToast(id);
-      }, 7000);
-    }
+    const timeoutMs = updates.type === "loading" ? 15000 : 6000;
+    setTimeout(() => {
+      removeToast(id);
+    }, timeoutMs);
   };
 
   return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast, updateToast }}>
+    <ToastContext.Provider value={{ toasts, addToast, removeToast, updateToast, clearAllToasts }}>
       {children}
       {/* Toast Render Container */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-md w-full pointer-events-none">
@@ -105,7 +119,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
               <button
                 onClick={() => removeToast(toast.id)}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-0.5"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 cursor-pointer"
+                title="Dismiss"
               >
                 <X className="w-4 h-4" />
               </button>

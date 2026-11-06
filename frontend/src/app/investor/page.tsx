@@ -41,7 +41,7 @@ interface Vault {
 }
 
 export default function InvestorPortal() {
-  const { addToast } = useToast();
+  const { addToast, removeToast } = useToast();
   const { account, usdtBalance, connect, refreshBalance } = useWeb3();
   const [loading, setLoading] = useState(false);
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
@@ -108,7 +108,7 @@ export default function InvestorPortal() {
     if (!account) return handleConnect();
     setLoading(true);
 
-    addToast({
+    const loadId = addToast({
       type: "loading",
       title: "Requesting Testnet Liquidity",
       description: "Calling MockUSDC faucet on Whitechain Sepolia...",
@@ -116,7 +116,11 @@ export default function InvestorPortal() {
 
     try {
       const conn = await connectWallet();
-      if (!conn) return;
+      if (!conn) {
+        removeToast(loadId);
+        setLoading(false);
+        return;
+      }
 
       const usdc = new ethers.Contract(SEPOLIA_CONTRACTS.MockUSDC, MOCK_USDC_ABI, conn.signer);
       const amount = ethers.parseUnits("10000", 6);
@@ -125,6 +129,7 @@ export default function InvestorPortal() {
 
       await refreshBalance();
 
+      removeToast(loadId);
       addToast({
         type: "success",
         title: "10,000 MockUSDC Credited",
@@ -133,6 +138,7 @@ export default function InvestorPortal() {
       });
     } catch (err: any) {
       console.error(err);
+      removeToast(loadId);
       addToast({
         type: "error",
         title: "Faucet Mint Failed",
@@ -149,7 +155,7 @@ export default function InvestorPortal() {
     if (!selectedVault) return;
     setLoading(true);
 
-    addToast({
+    const loadId = addToast({
       type: "loading",
       title: "Authorizing USDT Settlement",
       description: `Funding $${investAmount} USDT on Whitechain to ${selectedVault.ticker}...`,
@@ -157,7 +163,11 @@ export default function InvestorPortal() {
 
     try {
       const conn = await connectWallet();
-      if (!conn) return;
+      if (!conn) {
+        removeToast(loadId);
+        setLoading(false);
+        return;
+      }
 
       const amount = ethers.parseUnits(investAmount, 6);
       let tx;
@@ -179,6 +189,7 @@ export default function InvestorPortal() {
 
       const units = (Number(investAmount) / selectedVault.tokenPrice).toFixed(2);
 
+      removeToast(loadId);
       addToast({
         type: "success",
         title: "Subscription Confirmed on Whitechain",
@@ -189,6 +200,7 @@ export default function InvestorPortal() {
       setSelectedVault(null);
     } catch (err: any) {
       console.error(err);
+      removeToast(loadId);
       addToast({
         type: "error",
         title: "Subscription Error",
@@ -203,7 +215,7 @@ export default function InvestorPortal() {
   const handleClaimPayout = async (distId: number) => {
     setLoading(true);
 
-    addToast({
+    const loadId = addToast({
       type: "loading",
       title: "Executing Dividend Claim",
       description: "Verifying Merkle entitlement on DistributionManager...",
@@ -211,15 +223,23 @@ export default function InvestorPortal() {
 
     try {
       const conn = await connectWallet();
-      if (!conn) return;
+      if (!conn) {
+        removeToast(loadId);
+        setLoading(false);
+        return;
+      }
 
+      await refreshBalance();
+
+      removeToast(loadId);
       addToast({
         type: "success",
         title: "Dividend Claimed",
-        description: "125.50 USDC transferred to your treasury wallet.",
+        description: "125.50 USDT transferred to your treasury wallet.",
       });
     } catch (err: any) {
       console.error(err);
+      removeToast(loadId);
       addToast({
         type: "error",
         title: "Claim Failed",
