@@ -170,6 +170,7 @@ export default function App() {
 
   const handleEnterAsInvestor = (investorAddr) => {
     const target = investorAddr || account || "0x1b61bea7ddcc82210013a3b9c81a36484358a02a";
+    setAccount(target);
     const investorUser = {
       role: "INVESTOR",
       address: target,
@@ -178,6 +179,7 @@ export default function App() {
     setCurrentUser(investorUser);
     localStorage.setItem("vestor_auth_user", JSON.stringify(investorUser));
     fetchUserHoldings(target, null, inventories);
+    fetchUsdcBalance(target);
   };
 
   const handleSwitchToMarketplace = () => {
@@ -360,6 +362,37 @@ export default function App() {
     } catch (err) {
       console.error(err);
       setErrorMessage(err.message || "Failed to connect to selected wallet");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  // Universal Connect Wallet Handler
+  const handleConnectWallet = async () => {
+    setIsConnecting(true);
+    setErrorMessage("");
+    try {
+      if (detectedWallets.length === 1) {
+        await connectSpecificWallet(detectedWallets[0]);
+        return;
+      }
+      if (detectedWallets.length > 1) {
+        setIsWalletModalOpen(true);
+        return;
+      }
+      if (window.ethereum) {
+        const prov = window.ethereum;
+        const name = prov.isMetaMask ? "MetaMask" : prov.isCoinbaseWallet ? "Coinbase Wallet" : prov.isRabby ? "Rabby" : "Browser Wallet";
+        await connectSpecificWallet({
+          info: { name, uuid: "injected-direct", rdns: "injected-direct" },
+          provider: prov
+        });
+        return;
+      }
+      setIsWalletModalOpen(true);
+    } catch (err) {
+      console.error("Connect error:", err);
+      setErrorMessage(err.message || "Failed to connect wallet");
     } finally {
       setIsConnecting(false);
     }
@@ -1010,6 +1043,88 @@ export default function App() {
   const totalTokensOwned = userHoldings.reduce((sum, h) => sum + (h.balance || 0), 0);
   const totalProjectedYield = userHoldings.reduce((sum, h) => sum + (h.projectedYield || 0), 0);
 
+  // Multi-Wallet Modal Renderer
+  const renderWalletModal = () => (
+    <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Select a Wallet</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Detected {detectedWallets.length} installed wallet{detectedWallets.length === 1 ? '' : 's'} on your device
+            </p>
+          </div>
+          <button
+            onClick={() => setIsWalletModalOpen(false)}
+            className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+          {detectedWallets.length > 0 ? (
+            detectedWallets.map((wallet) => (
+              <button
+                key={wallet.info.uuid || wallet.info.rdns}
+                onClick={() => connectSpecificWallet(wallet)}
+                className="w-full flex items-center justify-between p-3.5 bg-slate-50 hover:bg-red-50/60 border border-slate-200 hover:border-red-300 rounded-xl transition group text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  {wallet.info.icon ? (
+                    <img
+                      src={wallet.info.icon}
+                      alt={wallet.info.name}
+                      className="w-8 h-8 rounded-lg flex-shrink-0 object-contain p-0.5 bg-white border border-slate-200"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-200">
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 group-hover:text-red-700">
+                      {wallet.info.name}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      {wallet.info.rdns ? wallet.info.rdns : 'Browser Extension'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-red-600 font-medium group-hover:translate-x-0.5 transition-transform">
+                  Connect &rarr;
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="py-8 text-center space-y-3">
+              <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
+              <p className="text-xs text-slate-500">
+                No Web3 wallets detected by standard scanner.
+              </p>
+              {window.ethereum && (
+                <button
+                  type="button"
+                  onClick={() => connectSpecificWallet({
+                    info: { name: window.ethereum.isMetaMask ? "MetaMask" : "Browser Wallet", uuid: "injected" },
+                    provider: window.ethereum
+                  })}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-red-600/20 cursor-pointer"
+                >
+                  Connect Injected Wallet (MetaMask)
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <p className="text-[11px] text-center text-slate-400 pt-2 border-t border-slate-100">
+          Scanned via EIP-6963 Multi-Provider Standard
+        </p>
+      </div>
+    </div>
+  );
+
   // If not logged in, render the Dual-Portal Gateway (Investor & Admin)
   if (!currentUser) {
     return (
@@ -1101,7 +1216,7 @@ export default function App() {
 
                       <button
                         type="button"
-                        onClick={() => setIsWalletModalOpen(true)}
+                        onClick={handleConnectWallet}
                         className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium transition cursor-pointer"
                       >
                         Switch / Connect Different Wallet
@@ -1119,11 +1234,12 @@ export default function App() {
 
                       <button
                         type="button"
-                        onClick={() => setIsWalletModalOpen(true)}
-                        className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                        onClick={handleConnectWallet}
+                        disabled={isConnecting}
+                        className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                       >
                         <Wallet className="w-4 h-4" />
-                        Connect Wallet to Enter
+                        {isConnecting ? "Connecting to Wallet..." : "Connect Wallet to Enter"}
                       </button>
 
                       <div className="pt-2 border-t border-slate-100 text-center">
@@ -1260,6 +1376,9 @@ export default function App() {
             Whitechain Testnet (Chain ID 1874) &bull; RWA Protocol
           </p>
         </div>
+
+        {/* Multi-Wallet Scanner Modal inside Login Gateway */}
+        {isWalletModalOpen && renderWalletModal()}
       </div>
     );
   }
@@ -2724,75 +2843,7 @@ export default function App() {
       )}
 
       {/* Multi-Wallet Scanner Modal (EIP-6963) */}
-      {isWalletModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">Select a Wallet</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Detected {detectedWallets.length} installed wallet{detectedWallets.length === 1 ? '' : 's'} on your device
-                </p>
-              </div>
-              <button
-                onClick={() => setIsWalletModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-              {detectedWallets.length > 0 ? (
-                detectedWallets.map((wallet) => (
-                  <button
-                    key={wallet.info.uuid || wallet.info.rdns}
-                    onClick={() => connectSpecificWallet(wallet)}
-                    className="w-full flex items-center justify-between p-3.5 bg-slate-50 hover:bg-red-50/60 border border-slate-200 hover:border-red-300 rounded-xl transition group text-left cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      {wallet.info.icon ? (
-                        <img
-                          src={wallet.info.icon}
-                          alt={wallet.info.name}
-                          className="w-8 h-8 rounded-lg flex-shrink-0 object-contain p-0.5 bg-white border border-slate-200"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-200">
-                          <Wallet className="w-4 h-4" />
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-slate-900 group-hover:text-red-700">
-                          {wallet.info.name}
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          {wallet.info.rdns ? wallet.info.rdns : 'Browser Extension'}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-red-600 font-medium group-hover:translate-x-0.5 transition-transform">
-                      Connect &rarr;
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <div className="py-8 text-center space-y-3">
-                  <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
-                  <p className="text-xs text-slate-500">
-                    No Web3 wallets detected on this browser. <br />
-                    Please install MetaMask, Rabby, or Coinbase Wallet extension.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <p className="text-[11px] text-center text-slate-400 pt-2 border-t border-slate-100">
-              Scanned via EIP-6963 Multi-Provider Standard
-            </p>
-          </div>
-        </div>
-      )}
+      {isWalletModalOpen && renderWalletModal()}
     </div>
   );
 }
