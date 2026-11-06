@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { ExternalLink, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { SEPOLIA_CONTRACTS } from "../lib/contracts";
 
@@ -97,19 +98,19 @@ export function Footer() {
             </h4>
             <ul className="space-y-1.5 text-xs text-slate-600">
               <li>
-                <a href="/company" className="hover:text-slate-900 transition-colors">
+                <Link href="/company" className="hover:text-slate-900 transition-colors">
                   Borrower Loan Origination Console
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/investor" className="hover:text-slate-900 transition-colors">
+                <Link href="/investor" className="hover:text-slate-900 transition-colors">
                   Institutional Investor Orderbook
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/admin" className="hover:text-slate-900 transition-colors">
+                <Link href="/admin" className="hover:text-slate-900 transition-colors">
                   Credit Risk & Waterfall Workstation
-                </a>
+                </Link>
               </li>
               <li>
                 <a

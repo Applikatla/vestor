@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { SEPOLIA_CONTRACTS } from "../lib/contracts";
 import { useToast } from "../components/Toast";
 import {
@@ -141,20 +142,20 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
-          <a
+          <Link
             href="/company"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
           >
             <Building2 className="w-3.5 h-3.5" />
             Originate Facility
-          </a>
-          <a
+          </Link>
+          <Link
             href="/investor"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-sm cursor-pointer"
           >
             <Users className="w-3.5 h-3.5" />
             Investor Orderbook
-          </a>
+          </Link>
         </div>
       </div>
 

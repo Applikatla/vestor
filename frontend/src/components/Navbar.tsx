@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { connectWallet, formatAddress } from "../lib/web3";
-import { SEPOLIA_CONTRACTS, MOCK_USDC_ABI, USDT_ABI } from "../lib/contracts";
-import { ethers } from "ethers";
+import { useWeb3 } from "../context/Web3Context";
+import { formatAddress } from "../lib/web3";
+import { SEPOLIA_CONTRACTS } from "../lib/contracts";
 import {
   Layers,
   Wallet,
@@ -14,115 +15,19 @@ import {
   Coins,
   AlertTriangle,
   ExternalLink,
-  ChevronRight,
+  Loader2,
 } from "lucide-react";
 
 export function Navbar() {
-  const [account, setAccount] = useState<string>("");
-  const [chainId, setChainId] = useState<number | null>(null);
-  const [usdtBalance, setUsdtBalance] = useState<string | null>(null);
-  const [isWrongNetwork, setIsWrongNetwork] = useState(false);
+  const {
+    account,
+    usdtBalance,
+    isWrongNetwork,
+    connecting,
+    connect,
+    switchNetwork,
+  } = useWeb3();
   const pathname = usePathname();
-
-  const loadUserData = async (addr: string) => {
-    try {
-      if (typeof window !== "undefined" && window.ethereum) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const net = await provider.getNetwork();
-        const cid = Number(net.chainId);
-        setChainId(cid);
-        setIsWrongNetwork(cid !== SEPOLIA_CONTRACTS.chainId);
-
-        if (cid === SEPOLIA_CONTRACTS.chainId) {
-          try {
-            // First try official Whitechain USDT
-            const usdt = new ethers.Contract(SEPOLIA_CONTRACTS.USDT, USDT_ABI, provider);
-            const bal = await usdt.balanceOf(addr);
-            if (bal > 0n) {
-              setUsdtBalance(parseFloat(ethers.formatUnits(bal, 6)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " USDT");
-            } else {
-              // Check fallback mock token
-              const mock = new ethers.Contract(SEPOLIA_CONTRACTS.MockUSDC, MOCK_USDC_ABI, provider);
-              const mockBal = await mock.balanceOf(addr);
-              if (mockBal > 0n) {
-                setUsdtBalance(parseFloat(ethers.formatUnits(mockBal, 6)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MOCK");
-              } else {
-                setUsdtBalance("0.00 USDT");
-              }
-            }
-          } catch {
-            setUsdtBalance("0.00 USDT");
-          }
-        } else {
-          setUsdtBalance(null);
-        }
-      }
-    } catch (e) {
-      console.error("Failed fetching user navbar state:", e);
-    }
-  };
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      window.ethereum
-        .request({ method: "eth_accounts" })
-        .then((accounts: string[]) => {
-          if (accounts.length > 0) {
-            setAccount(accounts[0]);
-            loadUserData(accounts[0]);
-          }
-        })
-        .catch(console.error);
-
-      window.ethereum.on("accountsChanged", (accounts: string[]) => {
-        if (accounts.length > 0) {
-          setAccount(accounts[0]);
-          loadUserData(accounts[0]);
-        } else {
-          setAccount("");
-          setUsdtBalance(null);
-        }
-      });
-
-      window.ethereum.on("chainChanged", () => {
-        window.location.reload();
-      });
-    }
-  }, []);
-
-  const handleConnect = async () => {
-    const res = await connectWallet();
-    if (res) {
-      setAccount(res.address);
-      loadUserData(res.address);
-    }
-  };
-
-  const handleSwitchNetwork = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        await window.ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: "0x752" }], // 1874
-        });
-      } catch (e: any) {
-        if (e.code === 4902) {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: "0x752",
-                chainName: "Whitechain Sepolia",
-                nativeCurrency: { name: "WhiteBIT Coin", symbol: "WBT", decimals: 18 },
-                rpcUrls: ["https://rpc.testnet.whitechain.io"],
-                blockExplorerUrls: ["https://explorer.testnet.whitechain.io"],
-              },
-            ],
-          });
-        }
-      }
-    }
-  };
 
   const navLinks = [
     { name: "Portfolio & Facilities", href: "/", icon: Layers },
@@ -157,7 +62,7 @@ export function Navbar() {
       <nav className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
         {/* Left: Organization / Brand Identity */}
         <div className="flex items-center gap-6">
-          <a href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-base shadow-sm">
               IC
             </div>
@@ -174,7 +79,7 @@ export function Navbar() {
                 Warehouse RWA Desk
               </span>
             </div>
-          </a>
+          </Link>
 
           {/* Navigation Links */}
           <div className="hidden md:flex items-center gap-1 pl-4 border-l border-slate-200">
@@ -182,7 +87,7 @@ export function Navbar() {
               const Icon = link.icon;
               const isActive = pathname === link.href;
               return (
-                <a
+                <Link
                   key={link.name}
                   href={link.href}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
@@ -193,7 +98,7 @@ export function Navbar() {
                 >
                   <Icon className="w-3.5 h-3.5 text-slate-500" />
                   {link.name}
-                </a>
+                </Link>
               );
             })}
           </div>
@@ -214,8 +119,8 @@ export function Navbar() {
 
           {account && isWrongNetwork && (
             <button
-              onClick={handleSwitchNetwork}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors"
+              onClick={switchNetwork}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
             >
               <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
               Switch Network (1874)
@@ -237,10 +142,15 @@ export function Navbar() {
             </div>
           ) : (
             <button
-              onClick={handleConnect}
-              className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-lg text-xs transition-colors shadow-sm cursor-pointer"
+              onClick={connect}
+              disabled={connecting}
+              className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-lg text-xs transition-colors shadow-sm cursor-pointer disabled:opacity-50"
             >
-              <Wallet className="w-3.5 h-3.5" />
+              {connecting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Wallet className="w-3.5 h-3.5" />
+              )}
               Connect Treasury Wallet
             </button>
           )}

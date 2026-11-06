@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { SEPOLIA_CONTRACTS, MOCK_USDC_ABI, USDT_ABI, DISTRIBUTION_MANAGER_ABI } from "../../lib/contracts";
 import { connectWallet, formatAddress } from "../../lib/web3";
 import { useToast } from "../../components/Toast";
+import { useWeb3 } from "../../context/Web3Context";
 import {
   Users,
   Droplets,
@@ -41,8 +42,7 @@ interface Vault {
 
 export default function InvestorPortal() {
   const { addToast } = useToast();
-  const [account, setAccount] = useState<string>("");
-  const [usdcBalance, setUsdcBalance] = useState<string>("0.00");
+  const { account, usdtBalance, connect, refreshBalance } = useWeb3();
   const [loading, setLoading] = useState(false);
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
   const [investAmount, setInvestAmount] = useState<string>("1000");
@@ -99,58 +99,8 @@ export default function InvestorPortal() {
     },
   ];
 
-  const fetchBalance = async (addr: string) => {
-    try {
-      if (typeof window !== "undefined" && window.ethereum) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        try {
-          // Query official Whitechain USDT first
-          const usdt = new ethers.Contract(SEPOLIA_CONTRACTS.USDT, USDT_ABI, provider);
-          const bal = await usdt.balanceOf(addr);
-          if (bal > 0n) {
-            setUsdcBalance(parseFloat(ethers.formatUnits(bal, 6)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-            return;
-          }
-        } catch (e) {
-          console.warn("Official USDT balance lookup:", e);
-        }
-
-        // Fallback to test mock token if 0
-        const usdc = new ethers.Contract(SEPOLIA_CONTRACTS.MockUSDC, MOCK_USDC_ABI, provider);
-        const bal = await usdc.balanceOf(addr);
-        setUsdcBalance(parseFloat(ethers.formatUnits(bal, 6)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-      }
-    } catch (e) {
-      console.error("Balance fetch error:", e);
-    }
-  };
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      window.ethereum.request({ method: "eth_accounts" }).then((accs: string[]) => {
-        if (accs.length > 0) {
-          setAccount(accs[0]);
-          fetchBalance(accs[0]);
-        }
-      });
-
-      window.ethereum.on("accountsChanged", (accs: string[]) => {
-        if (accs.length > 0) {
-          setAccount(accs[0]);
-          fetchBalance(accs[0]);
-        } else {
-          setAccount("");
-        }
-      });
-    }
-  }, []);
-
   const handleConnect = async () => {
-    const conn = await connectWallet();
-    if (conn) {
-      setAccount(conn.address);
-      fetchBalance(conn.address);
-    }
+    await connect();
   };
 
   // 1-Click Mint MockUSDC on Whitechain Sepolia
@@ -173,7 +123,7 @@ export default function InvestorPortal() {
       const tx = await usdc.mint(conn.address, amount);
       const receipt = await tx.wait(1);
 
-      await fetchBalance(conn.address);
+      await refreshBalance();
 
       addToast({
         type: "success",
@@ -225,7 +175,7 @@ export default function InvestorPortal() {
       }
 
       const receipt = await tx.wait(1);
-      await fetchBalance(conn.address);
+      await refreshBalance();
 
       const units = (Number(investAmount) / selectedVault.tokenPrice).toFixed(2);
 
@@ -327,7 +277,7 @@ export default function InvestorPortal() {
         {[
           {
             label: "Available Settlement Cash (USDT)",
-            value: `$${usdcBalance}`,
+            value: usdtBalance ? `$${usdtBalance}` : "$0.00 USDT",
             sub: "Ready to deploy",
           },
           {
