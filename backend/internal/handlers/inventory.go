@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -377,6 +378,117 @@ func GetInventoryByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    inv,
+	})
+}
+
+// BuyInventoryRequest represents input from a physical inventory buyer.
+type BuyInventoryRequest struct {
+	SKU          string  `json:"sku" binding:"required"`
+	Quantity     uint    `json:"quantity" binding:"required,gt=0"`
+	BuyerAddress string  `json:"buyer_address" binding:"required"`
+	TxHash       string  `json:"tx_hash"`
+	AmountPaid   float64 `json:"amount_paid"`
+}
+
+// BuyInventoryItem processes a physical item purchase by a buyer using Mock USDC.
+func BuyInventoryItem(c *gin.Context) {
+	id := c.Param("id")
+	var req BuyInventoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid purchase request: " + err.Error()})
+		return
+	}
+
+	var inv models.Inventory
+	if err := database.DB.Preload("Items").Where("id = ? OR inventory_id = ?", id, id).First(&inv).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Inventory batch not found"})
+		return
+	}
+
+	// Locate the specific SKU item
+	var targetItem *models.InventoryItem
+	for i := range inv.Items {
+		if strings.EqualFold(inv.Items[i].SKU, req.SKU) {
+			targetItem = &inv.Items[i]
+			break
+		}
+	}
+
+	if targetItem == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("SKU '%s' not found in this inventory batch", req.SKU)})
+		return
+	}
+
+	if targetItem.Quantity < req.Quantity {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Insufficient physical stock: %d requested but only %d available", req.Quantity, targetItem.Quantity)})
+		return
+	}
+
+	totalCost := float64(req.Quantity) * targetItem.UnitPrice
+	if req.AmountPaid > 0 {
+		totalCost = req.AmountPaid
+	}
+
+	// Decrement specific SKU item quantity
+	targetItem.Quantity -= req.Quantity
+	if err := database.DB.Save(targetItem).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update item stock: " + err.Error()})
+		return
+	}
+
+	// Update overall inventory batch totals
+	inv.TotalSoldQuantity += req.Quantity
+	if inv.TotalRemainingQuantity >= req.Quantity {
+		inv.TotalRemainingQuantity -= req.Quantity
+	} else {
+		inv.TotalRemainingQuantity = 0
+	}
+	inv.TotalSalesProceeds += totalCost
+
+	// Record telemetry event in ledger
+	event := models.WarehouseEvent{
+		InventoryRefID:   inv.ID,
+		EventType:        "SALE",
+		SKU:              req.SKU,
+		QuantityDelta:    -int(req.Quantity),
+		ProceedsAmount:   totalCost,
+		ReferenceReceipt: req.TxHash,
+		Notes:            fmt.Sprintf("Purchased by %s for $%.2f USDC", req.BuyerAddress, totalCost),
+	}
+	database.DB.Create(&event)
+
+	if err := database.DB.Save(&inv).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update inventory batch ledger: " + err.Error()})
+		return
+	}
+
+	// Dynamic calculation of Token Market Value from realized sales profit
+	basePrice := inv.TokenPrice
+	if basePrice <= 0 {
+		basePrice = 1.0
+	}
+	targetCap := inv.TargetCapital
+	if targetCap <= 0 {
+		targetCap = 80000.0
+	}
+
+	// 20% margin on retail goods flows directly to tranche market valuation
+	salesProfitPercent := (inv.TotalSalesProceeds * 0.20 / targetCap) * 100.0
+	tokenMarketValue := basePrice * (1.0 + (salesProfitPercent / 100.0))
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":              true,
+		"message":              fmt.Sprintf("Successfully purchased %d units of %s", req.Quantity, targetItem.Name),
+		"inventory_id":         inv.InventoryID,
+		"sku":                  req.SKU,
+		"quantity_purchased":   req.Quantity,
+		"amount_paid":          totalCost,
+		"tx_hash":              req.TxHash,
+		"remaining_stock":      targetItem.Quantity,
+		"total_sold_quantity":  inv.TotalSoldQuantity,
+		"total_sales_proceeds": inv.TotalSalesProceeds,
+		"sales_profit_percent": salesProfitPercent,
+		"token_market_value":   tokenMarketValue,
 	})
 }
 

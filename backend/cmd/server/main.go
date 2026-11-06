@@ -119,6 +119,7 @@ func main() {
 
 		// Warehouse Telemetry / ERP Event Ingestion
 		api.POST("/inventories/:id/events", handlers.IngestWarehouseEvent)
+		api.POST("/inventories/:id/buy", handlers.BuyInventoryItem)
 	}
 
 	addr := fmt.Sprintf(":%s", port)

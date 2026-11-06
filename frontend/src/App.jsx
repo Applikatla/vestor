@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
 import deployments from './contracts/deployments.json';
 import InventoryRegistryABI from './contracts/InventoryRegistryABI.json';
@@ -37,7 +37,11 @@ import {
   ShoppingBag,
   BarChart3,
   Store,
-  ArrowUpRight
+  ArrowUpRight,
+  Package,
+  ShoppingCart,
+  Tag,
+  Truck
 } from 'lucide-react';
 
 const API_BASE = "http://localhost:8080/api";
@@ -124,7 +128,7 @@ export default function App() {
       return null;
     }
   });
-  const [loginPortalMode, setLoginPortalMode] = useState("investor"); // 'investor' | 'admin'
+  const [loginPortalMode, setLoginPortalMode] = useState("buyer"); // 'buyer' | 'investor' | 'admin'
   const [loginUsername, setLoginUsername] = useState("admin");
   const [loginPassword, setLoginPassword] = useState("admin@123");
   const [showPassword, setShowPassword] = useState(false);
@@ -168,6 +172,31 @@ export default function App() {
     }
   };
 
+  const handleEnterAsBuyer = (buyerAddr) => {
+    const target = buyerAddr || account || "0x1b61bea7ddcc82210013a3b9c81a36484358a02a";
+    setAccount(target);
+    const buyerUser = {
+      role: "BUYER",
+      address: target,
+      name: `Buyer (${target.slice(0, 6)}...${target.slice(-4)})`
+    };
+    setCurrentUser(buyerUser);
+    localStorage.setItem("vestor_auth_user", JSON.stringify(buyerUser));
+    fetchUsdcBalance(target);
+  };
+
+  const handleSwitchToBuyer = () => {
+    const target = account || "0x1b61bea7ddcc82210013a3b9c81a36484358a02a";
+    const buyerUser = {
+      role: "BUYER",
+      address: target,
+      name: `Buyer (${target.slice(0, 6)}...${target.slice(-4)})`
+    };
+    setCurrentUser(buyerUser);
+    localStorage.setItem("vestor_auth_user", JSON.stringify(buyerUser));
+    fetchUsdcBalance(target);
+  };
+
   const handleEnterAsInvestor = (investorAddr) => {
     const target = investorAddr || account || "0x1b61bea7ddcc82210013a3b9c81a36484358a02a";
     setAccount(target);
@@ -207,6 +236,115 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem("vestor_auth_user");
+  };
+
+  // Physical Inventory Marketplace State
+  const [selectedItemForBuy, setSelectedItemForBuy] = useState(null);
+  const [buyQuantity, setBuyQuantity] = useState(1);
+  const [isBuyingItem, setIsBuyingItem] = useState(false);
+  const [buyItemStep, setBuyItemStep] = useState("");
+  const [buyItemSuccessResult, setBuyItemSuccessResult] = useState(null);
+  const [marketplaceCategory, setMarketplaceCategory] = useState("ALL");
+
+  const openBuyItemModal = (item, inventory) => {
+    setSelectedItemForBuy({ item, inventory });
+    setBuyQuantity(1);
+    setBuyItemSuccessResult(null);
+    setErrorMessage("");
+  };
+
+  const handlePurchasePhysicalItem = async () => {
+    if (!selectedItemForBuy) return;
+    if (!account) {
+      setIsWalletModalOpen(true);
+      return;
+    }
+
+    const { item, inventory } = selectedItemForBuy;
+    const qty = parseInt(buyQuantity, 10);
+    if (qty <= 0 || qty > item.quantity) {
+      setErrorMessage(`Invalid quantity. Must be between 1 and ${item.quantity}.`);
+      return;
+    }
+
+    const totalCostUSDC = parseFloat(item.unit_price) * qty;
+
+    setIsBuyingItem(true);
+    setErrorMessage("");
+    setBuyItemSuccessResult(null);
+
+    try {
+      const rawProvider = activeProvider || window.ethereum;
+      if (!rawProvider) throw new Error("No Web3 wallet found. Please connect your wallet first.");
+      const provider = new ethers.BrowserProvider(rawProvider);
+      const signer = await provider.getSigner();
+
+      const usdcContract = new ethers.Contract(
+        deployments.contracts.MockUSDC,
+        MockUSDCArtifact.abi,
+        signer
+      );
+
+      const recipient = inventory.issuer_address || deployments.contracts.FinancingVault;
+      const amountUnits = ethers.parseUnits(totalCostUSDC.toString(), 6);
+
+      // Verify wallet balance
+      const buyerBal = await usdcContract.balanceOf(account);
+      if (buyerBal < amountUnits) {
+        throw new Error(`Insufficient Mock USDC balance. You have $${usdcBalance} USDC but need $${totalCostUSDC.toLocaleString()} USDC. Please claim free testnet USDC from the faucet.`);
+      }
+
+      console.log(`Transferring ${totalCostUSDC} Mock USDC to ${recipient} on Whitechain...`);
+      setBuyItemStep("transferring_usdc");
+      const tx = await usdcContract.transfer(recipient, amountUnits);
+
+      console.log("Tx broadcasted:", tx.hash);
+      setBuyItemStep("waiting_confirmation");
+      await tx.wait();
+
+      console.log("Payment confirmed on Whitechain! Registering purchase in backend...");
+      setBuyItemStep("updating_inventory");
+      const res = await fetch(`${API_BASE}/inventories/${inventory.id}/buy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sku: item.sku,
+          quantity: qty,
+          buyer_address: account,
+          tx_hash: tx.hash,
+          amount_paid: totalCostUSDC
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to record purchase with platform backend");
+      }
+
+      setBuyItemSuccessResult({
+        txHash: tx.hash,
+        itemName: item.name,
+        sku: item.sku,
+        quantity: qty,
+        amountPaid: totalCostUSDC,
+        remainingStock: data.remaining_stock,
+        tokenMarketValue: data.token_market_value,
+        salesProfitPercent: data.sales_profit_percent,
+        warehouseName: inventory.warehouse_name || inventory.warehouse_id
+      });
+
+      // Refresh balances, inventories and token holder yields
+      await fetchUsdcBalance(account, provider);
+      await fetchInventories();
+      await fetchUserHoldings(account, provider);
+
+    } catch (err) {
+      console.error("Physical purchase error:", err);
+      setErrorMessage(err.reason || err.message || "Failed to purchase physical inventory item");
+    } finally {
+      setIsBuyingItem(false);
+      setBuyItemStep("");
+    }
   };
 
   // Fetch USDC Balance
@@ -980,6 +1118,28 @@ export default function App() {
   const [userHoldings, setUserHoldings] = useState([]);
   const [isLoadingHoldings, setIsLoadingHoldings] = useState(false);
 
+  // Dynamic Token Market Value Calculator based on Physical Inventory Sales
+  const calculateTokenMarketValue = (inv) => {
+    const basePrice = parseFloat(inv.token_price || 1.0);
+    const targetCap = parseFloat(inv.target_capital || (inv.valuation ? inv.valuation * 0.8 : 80000));
+    const salesProceeds = parseFloat(inv.total_sales_proceeds || 0);
+
+    // 20% retail profit margin on physical sales flows directly into tranche token valuation
+    const netSalesProfit = salesProceeds * 0.20;
+    const salesProfitPercent = targetCap > 0 ? (netSalesProfit / targetCap) * 100 : 0;
+    const currentMarketPrice = basePrice * (1.0 + (salesProfitPercent / 100.0));
+
+    return {
+      basePrice,
+      currentMarketPrice,
+      salesProfitPercent,
+      netSalesProfit,
+      totalSalesProceeds: salesProceeds,
+      totalSoldQuantity: inv.total_sold_quantity || 0,
+      totalRemainingQuantity: inv.total_remaining_quantity || 0,
+    };
+  };
+
   const fetchUserHoldings = async (userAddr, prov, invList) => {
     const targetAddr = userAddr || account;
     if (!targetAddr) return;
@@ -1000,18 +1160,31 @@ export default function App() {
             const bal = await tokenContract.balanceOf(targetAddr);
             const tokenBal = parseFloat(ethers.formatUnits(bal, 18));
             if (tokenBal > 0) {
-              const price = parseFloat(inv.token_price || 1);
-              const currentValue = tokenBal * price;
-              const projectedYield = currentValue * 0.12; // 12% projected APY
+              const metrics = calculateTokenMarketValue(inv);
+              const costBasis = tokenBal * metrics.basePrice;
+              const currentValue = tokenBal * metrics.currentMarketPrice;
+              const realizedSalesProfit = currentValue - costBasis;
+              const projectedYield = costBasis * 0.12; // 12% fixed annual coupon
+              const totalReturn = realizedSalesProfit + projectedYield;
+
               holdings.push({
                 inventoryId: inv.inventory_id,
                 warehouseName: inv.warehouse_name || inv.warehouse_id,
                 warehouseLocation: inv.warehouse_location || "Mumbai, MH",
                 tokenAddress: inv.inventory_token_address,
                 balance: tokenBal,
-                tokenPrice: price,
+                basePrice: metrics.basePrice,
+                tokenPrice: metrics.currentMarketPrice,
+                costBasis: costBasis,
                 currentValue: currentValue,
+                realizedSalesProfit: realizedSalesProfit,
+                salesProfitPercent: metrics.salesProfitPercent,
+                totalSalesProceeds: metrics.totalSalesProceeds,
+                totalSoldQuantity: metrics.totalSoldQuantity,
+                totalRemainingQuantity: metrics.totalRemainingQuantity,
+                items: inv.items || [],
                 projectedYield: projectedYield,
+                totalReturn: totalReturn,
                 status: "ACCRUING_YIELD"
               });
             }
@@ -1040,8 +1213,42 @@ export default function App() {
 
   // Computed Portfolio Metrics for Investor
   const totalPortfolioValue = userHoldings.reduce((sum, h) => sum + (h.currentValue || 0), 0);
+  const totalCostBasis = userHoldings.reduce((sum, h) => sum + (h.costBasis || 0), 0);
   const totalTokensOwned = userHoldings.reduce((sum, h) => sum + (h.balance || 0), 0);
+  const totalRealizedSalesProfit = userHoldings.reduce((sum, h) => sum + (h.realizedSalesProfit || 0), 0);
   const totalProjectedYield = userHoldings.reduce((sum, h) => sum + (h.projectedYield || 0), 0);
+  const portfolioReturnPercent = totalCostBasis > 0 ? (totalRealizedSalesProfit / totalCostBasis) * 100 : 0;
+
+  // Physical Inventory Catalog Aggregator (For Buyers)
+  const allPhysicalCatalogItems = useMemo(() => {
+    const list = [];
+    inventories.forEach((inv) => {
+      if (inv.items && Array.isArray(inv.items)) {
+        inv.items.forEach((item) => {
+          list.push({
+            ...item,
+            inventory: inv,
+          });
+        });
+      }
+    });
+    return list;
+  }, [inventories]);
+
+  const filteredCatalogItems = useMemo(() => {
+    if (marketplaceCategory === "ALL") return allPhysicalCatalogItems;
+    return allPhysicalCatalogItems.filter(item =>
+      (item.category || "").toUpperCase() === marketplaceCategory.toUpperCase()
+    );
+  }, [allPhysicalCatalogItems, marketplaceCategory]);
+
+  const totalPhysicalUnitsInStock = useMemo(() => {
+    return allPhysicalCatalogItems.reduce((sum, it) => sum + (parseInt(it.quantity, 10) || 0), 0);
+  }, [allPhysicalCatalogItems]);
+
+  const totalPhysicalSalesProceeds = useMemo(() => {
+    return inventories.reduce((sum, inv) => sum + (parseFloat(inv.total_sales_proceeds) || 0), 0);
+  }, [inventories]);
 
   // Multi-Wallet Modal Renderer
   const renderWalletModal = () => (
@@ -1141,38 +1348,132 @@ export default function App() {
           </p>
         </div>
 
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg px-4">
           <div className="bg-white shadow-xl border border-slate-200 rounded-2xl overflow-hidden">
-            {/* Dual Portal Switcher Tabs */}
+            {/* Triple Portal Switcher Tabs */}
             <div className="flex border-b border-slate-200 bg-slate-50/70">
               <button
                 type="button"
+                onClick={() => setLoginPortalMode("buyer")}
+                className={`flex-1 py-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition cursor-pointer ${
+                  loginPortalMode === "buyer"
+                    ? "border-red-600 text-red-600 bg-white"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span>Inventory Market</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setLoginPortalMode("investor")}
-                className={`flex-1 py-3.5 text-xs font-semibold flex items-center justify-center gap-2 border-b-2 transition cursor-pointer ${
+                className={`flex-1 py-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition cursor-pointer ${
                   loginPortalMode === "investor"
                     ? "border-red-600 text-red-600 bg-white"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
-                <Store className="w-4 h-4" />
-                Token Marketplace (Investor)
+                <Store className="w-3.5 h-3.5" />
+                <span>Investor Portal</span>
               </button>
               <button
                 type="button"
                 onClick={() => setLoginPortalMode("admin")}
-                className={`flex-1 py-3.5 text-xs font-semibold flex items-center justify-center gap-2 border-b-2 transition cursor-pointer ${
+                className={`flex-1 py-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition cursor-pointer ${
                   loginPortalMode === "admin"
                     ? "border-red-600 text-red-600 bg-white"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
-                <Shield className="w-4 h-4" />
-                Admin Portal
+                <Shield className="w-3.5 h-3.5" />
+                <span>Admin Portal</span>
               </button>
             </div>
 
             <div className="py-7 px-6 sm:px-8 space-y-6">
-              {loginPortalMode === "investor" ? (
+              {loginPortalMode === "buyer" ? (
+                /* BUYER LOGIN WITH WALLET */
+                <div className="space-y-5">
+                  <div className="border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <ShoppingCart className="w-5 h-5 text-red-600" />
+                      <h2 className="text-lg font-semibold text-slate-900">Physical Inventory Marketplace</h2>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Connect your Web3 wallet to browse real-world warehouse inventory (GPUs, CPUs, hardware) and purchase bulk SKUs on Whitechain with Mock USDC.
+                    </p>
+                  </div>
+
+                  {account ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-red-50/60 border border-red-200 rounded-xl space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-red-900 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Wallet Connected
+                          </span>
+                          <span className="font-mono text-slate-600">{walletName || "Browser Wallet"}</span>
+                        </div>
+                        <p className="font-mono text-xs font-bold text-slate-900 break-all select-all">
+                          {account}
+                        </p>
+                        <div className="flex items-center justify-between pt-1 border-t border-red-100 text-xs">
+                          <span className="text-slate-500">Mock USDC Balance:</span>
+                          <span className="font-mono font-bold text-red-600">${usdcBalance} USDC</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleEnterAsBuyer(account)}
+                        className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                        Enter Inventory Marketplace as Buyer
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleConnectWallet}
+                        className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium transition cursor-pointer"
+                      >
+                        Switch / Connect Different Wallet
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
+                        <Wallet className="w-8 h-8 text-red-600 mx-auto" />
+                        <p className="text-xs font-semibold text-slate-800">No Web3 Wallet Connected</p>
+                        <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                          Connect MetaMask, Rabby, or Coinbase Wallet to purchase physical SKUs directly using Mock USDC.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleConnectWallet}
+                        disabled={isConnecting}
+                        className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        <Wallet className="w-4 h-4" />
+                        {isConnecting ? "Connecting to Wallet..." : "Connect Wallet to Enter"}
+                      </button>
+
+                      <div className="pt-2 border-t border-slate-100 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleEnterAsBuyer("0x1b61bea7ddcc82210013a3b9c81a36484358a02a")}
+                          className="text-xs text-red-600 hover:text-red-700 font-medium underline cursor-pointer"
+                        >
+                          Quick Demo Enter as Buyer (0x1b61...a02a)
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : loginPortalMode === "investor" ? (
                 /* INVESTOR LOGIN WITH WALLET */
                 <div className="space-y-5">
                   <div className="border-b border-slate-100 pb-3">
@@ -1403,52 +1704,62 @@ export default function App() {
 
         {/* Network & Wallet Controls & Faucet */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* User Role Badge & Switcher & Logout */}
-          {isInvestor ? (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs shadow-sm">
-              <Store className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="text-emerald-900 font-medium">
-                Investor: {currentUser?.address ? `${currentUser.address.slice(0, 6)}...${currentUser.address.slice(-4)}` : (account ? `${account.slice(0, 6)}...${account.slice(-4)}` : "Marketplace")}
-              </span>
-              <button
-                onClick={handleSwitchToAdmin}
-                title="Switch to Admin Portal"
-                className="ml-1 text-slate-600 hover:text-slate-900 px-2 py-0.5 rounded hover:bg-emerald-100/60 transition cursor-pointer flex items-center gap-1 font-medium text-[11px]"
-              >
-                <Shield className="w-3 h-3 text-red-600" />
-                <span>Admin View</span>
-              </button>
-              <button
-                onClick={handleLogout}
-                title="Exit Marketplace"
-                className="text-red-600 hover:text-red-800 px-1.5 py-0.5 rounded hover:bg-red-100/60 transition cursor-pointer flex items-center gap-1 font-semibold text-[11px]"
-              >
-                <LogOut className="w-3 h-3" />
-                <span>Exit</span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl text-xs shadow-sm">
-              <Shield className="w-3.5 h-3.5 text-red-600" />
-              <span className="text-red-900 font-medium">Admin: {currentUser?.username || "admin"}</span>
-              <button
-                onClick={handleSwitchToMarketplace}
-                title="View Investor Marketplace"
-                className="ml-1 text-slate-600 hover:text-slate-900 px-2 py-0.5 rounded hover:bg-red-100/60 transition cursor-pointer flex items-center gap-1 font-medium text-[11px]"
-              >
-                <Store className="w-3 h-3 text-red-600" />
-                <span>Marketplace</span>
-              </button>
-              <button
-                onClick={handleLogout}
-                title="Logout"
-                className="text-red-600 hover:text-red-800 px-1.5 py-0.5 rounded hover:bg-red-100 transition cursor-pointer flex items-center gap-1 font-semibold text-[11px]"
-              >
-                <LogOut className="w-3 h-3" />
-                <span>Logout</span>
-              </button>
-            </div>
-          )}
+          {/* 3-Role View Switcher */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+            <button
+              onClick={handleSwitchToBuyer}
+              className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition cursor-pointer ${
+                currentUser?.role === "BUYER"
+                  ? "bg-white text-red-600 shadow-sm font-semibold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>Inventory Market</span>
+            </button>
+            <button
+              onClick={handleSwitchToMarketplace}
+              className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition cursor-pointer ${
+                currentUser?.role === "INVESTOR"
+                  ? "bg-white text-red-600 shadow-sm font-semibold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Store className="w-3.5 h-3.5" />
+              <span>Investor Portal</span>
+            </button>
+            <button
+              onClick={handleSwitchToAdmin}
+              className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition cursor-pointer ${
+                currentUser?.role === "ADMIN"
+                  ? "bg-white text-red-600 shadow-sm font-semibold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Admin Portal</span>
+            </button>
+          </div>
+
+          {/* User Session & Logout */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-slate-800 font-medium">
+              {currentUser?.role === "BUYER"
+                ? `Buyer: ${account ? `${account.slice(0, 6)}...${account.slice(-4)}` : "Connected"}`
+                : currentUser?.role === "INVESTOR"
+                ? `Investor: ${account ? `${account.slice(0, 6)}...${account.slice(-4)}` : "Connected"}`
+                : `Admin: ${currentUser?.username || "admin"}`}
+            </span>
+            <button
+              onClick={handleLogout}
+              title="Logout"
+              className="text-red-600 hover:text-red-800 px-1.5 py-0.5 rounded hover:bg-red-50 transition cursor-pointer flex items-center gap-1 font-semibold text-[11px]"
+            >
+              <LogOut className="w-3 h-3" />
+              <span>Exit</span>
+            </button>
+          </div>
 
           {/* Google-Style Faucet Button */}
           <button
@@ -1602,9 +1913,248 @@ export default function App() {
       )}
 
       {/* ============================================================== */}
-      {/* INVESTOR VIEW: PORTFOLIO DASHBOARD & LIVE TOKEN MARKETPLACE    */}
+      {/* 1. BUYER VIEW: PHYSICAL INVENTORY MARKETPLACE                  */}
       {/* ============================================================== */}
-      {isInvestor ? (
+      {currentUser?.role === "BUYER" ? (
+        <div className="space-y-8">
+          {/* Buyer Hero Banner */}
+          <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-red-600/15 relative overflow-hidden">
+            <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div className="relative z-10 space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-medium">
+                <Package className="w-3.5 h-3.5 text-amber-300" />
+                <span>Direct Warehouse Sourcing with Mock USDC</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                Physical Inventory Marketplace
+              </h1>
+              <p className="text-red-100 text-sm max-w-2xl leading-relaxed">
+                Source enterprise hardware, GPUs, and certified electronics directly from audited logistics hubs on Whitechain.
+                Every purchase transfers Mock USDC, updates warehouse physical stock, and automatically drives profit appreciation into correlated tranche tokens!
+              </p>
+            </div>
+          </div>
+
+          {/* 4 Financial Metrics Cards for Buyer */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 1. Listed SKUs */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                <span>Listed SKUs</span>
+                <div className="p-2 bg-red-50 text-red-600 rounded-xl">
+                  <Tag className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold font-mono text-slate-900">
+                {allPhysicalCatalogItems.length}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Across {inventories.length} verified batch{inventories.length === 1 ? '' : 'es'}
+              </p>
+            </div>
+
+            {/* 2. Total Units In Warehouse */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                <span>In-Stock Physical Units</span>
+                <div className="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                  <Package className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold font-mono text-slate-900">
+                {totalPhysicalUnitsInStock.toLocaleString()}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Audited & ready for dispatch
+              </p>
+            </div>
+
+            {/* 3. Total Physical Sales Realized */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                <span>Total Sales Volume</span>
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold font-mono text-emerald-600 flex items-center gap-1">
+                ${totalPhysicalSalesProceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                USDC Settled on Whitechain
+              </p>
+            </div>
+
+            {/* 4. Buyer's USDC Buying Power */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                <span>Buyer Balance (USDC)</span>
+                <div className="p-2 bg-slate-50 text-slate-700 rounded-xl">
+                  <Coins className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold font-mono text-slate-900">
+                ${usdcBalance}
+              </p>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">Mock USDC</span>
+                <button
+                  onClick={() => openFaucetModal(account)}
+                  className="text-red-600 hover:text-red-700 font-medium hover:underline flex items-center gap-0.5 cursor-pointer"
+                >
+                  Get 10k Free &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Catalog Section with Category Filter */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-red-50 text-red-600 rounded-xl">
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">Verified Warehouse Inventory Catalog</h2>
+                  <p className="text-xs text-slate-500">
+                    Direct procurement with on-chain payment via Mock USDC
+                  </p>
+                </div>
+              </div>
+
+              {/* Category Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {["ALL", "ELECTRONICS", "COMPUTING", "HARDWARE"].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setMarketplaceCategory(cat)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                      marketplaceCategory === cat
+                        ? "bg-red-600 text-white shadow-sm shadow-red-600/20"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredCatalogItems.length === 0 ? (
+              <div className="py-12 px-4 text-center rounded-xl bg-slate-50/60 border border-slate-200 border-dashed space-y-3">
+                <Package className="w-10 h-10 mx-auto text-slate-400" />
+                <p className="text-sm font-semibold text-slate-900">No Physical Inventory Found</p>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  There are currently no items matching the selected category. Switch categories or ask an admin to onboard warehouse batches.
+                </p>
+                <button
+                  onClick={handleSwitchToAdmin}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition cursor-pointer shadow-md shadow-red-600/20"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  Onboard Batch in Admin Portal
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredCatalogItems.map((item, idx) => {
+                  const inv = item.inventory;
+                  const tokenMetrics = calculateTokenMarketValue(inv);
+                  const inStock = parseInt(item.quantity, 10) > 0;
+
+                  return (
+                    <div
+                      key={`${inv.id}-${item.sku}-${idx}`}
+                      className="border border-slate-200 rounded-2xl p-5 hover:border-red-300 transition shadow-sm hover:shadow-md bg-white flex flex-col justify-between space-y-4"
+                    >
+                      <div className="space-y-3">
+                        {/* Header Badges */}
+                        <div className="flex items-center justify-between">
+                          <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            {item.sku}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                            {item.category || "General"}
+                          </span>
+                        </div>
+
+                        {/* Title & Warehouse */}
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900 leading-snug">
+                            {item.name}
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                            <Warehouse className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <span>{inv.warehouse_name || inv.warehouse_id} &bull; {inv.warehouse_location}</span>
+                          </p>
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            Batch: {item.batch_no || "BATCH-2026"}
+                          </p>
+                        </div>
+
+                        {/* Price & Stock Stats */}
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-[11px] text-slate-500 font-sans">Unit Price:</span>
+                            <span className="text-lg font-bold font-mono text-red-600">
+                              ${parseFloat(item.unit_price || 0).toLocaleString()} <span className="text-xs text-slate-500">USDC</span>
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60">
+                            <span className="text-slate-500">Warehouse Stock:</span>
+                            <span className={`font-mono font-bold ${inStock ? 'text-emerald-700' : 'text-slate-400'}`}>
+                              {item.quantity} units {inStock ? 'available' : '(Sold Out)'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Correlated Tranche Token Value Banner */}
+                        {inv.inventory_token_address && (
+                          <div className="p-2.5 bg-red-50/70 border border-red-200/80 rounded-xl text-[11px] space-y-1">
+                            <div className="flex items-center justify-between text-red-900 font-medium">
+                              <span className="flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-red-600" />
+                                Backing Tranche Token:
+                              </span>
+                              <span className="font-mono font-semibold">
+                                {tokenMetrics.currentMarketPrice > tokenMetrics.basePrice ? (
+                                  <span className="text-emerald-700 font-bold">
+                                    ${tokenMetrics.currentMarketPrice.toFixed(2)} (+{tokenMetrics.salesProfitPercent.toFixed(1)}%)
+                                  </span>
+                                ) : (
+                                  `$${tokenMetrics.basePrice.toFixed(2)} USDC`
+                                )}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-red-700">
+                              ⚡ Every unit purchased adds ~20% retail profit margin into the tranche valuation for investors!
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Buy Action Button */}
+                      <button
+                        onClick={() => openBuyItemModal(item, inv)}
+                        disabled={!inStock}
+                        className="w-full py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none text-white rounded-xl text-xs font-bold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                        <span>{inStock ? `Buy Goods ($${parseFloat(item.unit_price).toLocaleString()} USDC)` : "Out of Stock"}</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : currentUser?.role === "INVESTOR" ? (
+        /* ============================================================== */
+        /* 2. INVESTOR VIEW: PORTFOLIO DASHBOARD & LIVE TOKEN MARKETPLACE */
+        /* ============================================================== */
         <div className="space-y-8">
           {/* Investor Hero Banner */}
           <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-red-600/15 relative overflow-hidden">
@@ -1626,7 +2176,7 @@ export default function App() {
 
           {/* 4 Financial Metrics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* 1. Total Portfolio Value */}
+            {/* 1. Total Portfolio Market Value */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
               <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
                 <span>Total Portfolio Value</span>
@@ -1637,9 +2187,14 @@ export default function App() {
               <p className="text-2xl font-bold font-mono text-slate-900">
                 ${totalPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[11px] text-slate-500">
-                Across {userHoldings.length} active inventory tranche{userHoldings.length === 1 ? '' : 's'}
-              </p>
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span>Cost: ${totalCostBasis.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                {totalRealizedSalesProfit > 0 && (
+                  <span className="text-emerald-600 font-semibold font-mono">
+                    +${totalRealizedSalesProfit.toFixed(2)} (+{portfolioReturnPercent.toFixed(1)}%)
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* 2. Total Tokens Owned */}
@@ -1661,17 +2216,22 @@ export default function App() {
             {/* 3. Accrued / Projected Profit */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
               <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
-                <span>Projected Annual Profit</span>
+                <span>Sales Profit & Yield</span>
                 <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
                   <TrendingUp className="w-4 h-4" />
                 </div>
               </div>
               <p className="text-2xl font-bold font-mono text-emerald-600 flex items-center gap-1">
-                +${totalProjectedYield.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                +${(totalRealizedSalesProfit + totalProjectedYield).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
-                <ArrowUpRight className="w-3.5 h-3.5" />
-                <span>12.0% Fixed Coupon APY</span>
+              <div className="flex items-center gap-2 text-[11px] font-medium flex-wrap">
+                <span className="text-emerald-700 font-semibold">
+                  +${totalRealizedSalesProfit.toFixed(2)} sales profit
+                </span>
+                <span className="text-slate-400">&bull;</span>
+                <span className="text-slate-600">
+                  +${totalProjectedYield.toFixed(2)} coupon (12% APY)
+                </span>
               </div>
             </div>
 
@@ -1708,7 +2268,7 @@ export default function App() {
                 <div>
                   <h2 className="text-base font-semibold text-slate-900">My Active Token Holdings & Profit / Loss</h2>
                   <p className="text-xs text-slate-500">
-                    Live on-chain token balances and yield tracking for {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : "your wallet"}
+                    Live on-chain token balances and auto-calculated profit from physical inventory sales
                   </p>
                 </div>
               </div>
@@ -1740,9 +2300,10 @@ export default function App() {
                       <th className="py-3 px-4">Asset / Warehouse</th>
                       <th className="py-3 px-4">Token Address</th>
                       <th className="py-3 px-4">Tokens Held</th>
-                      <th className="py-3 px-4">Unit Price</th>
+                      <th className="py-3 px-4">Base / Market Value</th>
                       <th className="py-3 px-4">Position Value</th>
-                      <th className="py-3 px-4">Est. Annual Profit</th>
+                      <th className="py-3 px-4">Realized Profit</th>
+                      <th className="py-3 px-4">Physical Sales Status</th>
                       <th className="py-3 px-4 text-right">Yield Status</th>
                     </tr>
                   </thead>
@@ -1767,14 +2328,59 @@ export default function App() {
                         <td className="py-3.5 px-4 text-slate-900 font-bold">
                           {holding.balance.toLocaleString()} {holding.tokenSymbol || 'Tokens'}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-700">
-                          ${holding.tokenPrice.toFixed(2)} USDC
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-slate-900 block">
+                              ${holding.tokenPrice.toFixed(4)} USDC
+                            </span>
+                            <div className="flex items-center gap-1 font-sans">
+                              <span className="text-[10px] text-slate-400">Base: ${holding.basePrice.toFixed(2)}</span>
+                              {holding.salesProfitPercent > 0 && (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  +{holding.salesProfitPercent.toFixed(1)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </td>
                         <td className="py-3.5 px-4 text-slate-900 font-bold">
-                          ${holding.currentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <p>${holding.currentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <span className="text-[10px] text-slate-400 font-sans block">
+                            Cost: ${holding.costBasis.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
                         </td>
-                        <td className="py-3.5 px-4 text-emerald-600 font-bold">
-                          +${holding.projectedYield.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <td className="py-3.5 px-4 font-bold">
+                          {holding.realizedSalesProfit > 0 ? (
+                            <div className="space-y-0.5">
+                              <span className="text-emerald-600 block">
+                                +${holding.realizedSalesProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              <span className="text-[10px] font-sans text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block font-semibold">
+                                +{holding.salesProfitPercent.toFixed(1)}% sales profit
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 font-sans text-xs">Waiting for sales</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 font-sans text-xs">
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px] text-slate-600 font-mono">
+                              <span>{holding.totalSoldQuantity} sold</span>
+                              <span>{holding.totalRemainingQuantity} left</span>
+                            </div>
+                            <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-red-600 rounded-full"
+                                style={{
+                                  width: `${Math.min(100, ((holding.totalSoldQuantity || 0) / Math.max(1, (holding.totalSoldQuantity + holding.totalRemainingQuantity))) * 100)}%`
+                                }}
+                              ></div>
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-mono block">
+                              Proceeds: ${holding.totalSalesProceeds.toLocaleString()} USDC
+                            </span>
+                          </div>
                         </td>
                         <td className="py-3.5 px-4 text-right font-sans">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -1831,72 +2437,85 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {inventories
                   .filter((i) => i.status === "FINANCED")
-                  .map((inv) => (
-                    <div
-                      key={inv.id}
-                      className="border border-slate-200 rounded-2xl p-5 hover:border-red-300 transition shadow-sm hover:shadow-md bg-white space-y-4"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-base font-bold text-slate-900">
-                              {inv.warehouse_name || inv.warehouse_id}
-                            </h3>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              Active Tranche
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 mt-0.5">{inv.warehouse_location}</p>
-                        </div>
-                        <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-red-50 text-red-600 border border-red-200">
-                          12.0% APY
-                        </span>
-                      </div>
+                  .map((inv) => {
+                    const tokenMetrics = calculateTokenMarketValue(inv);
 
-                      {/* Financial specs grid */}
-                      <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono">
-                        <div>
-                          <span className="text-[10px] text-slate-500 uppercase font-sans block">Valuation</span>
-                          <span className="font-semibold text-slate-900">
-                            ${inv.valuation ? inv.valuation.toLocaleString() : "N/A"}
+                    return (
+                      <div
+                        key={inv.id}
+                        className="border border-slate-200 rounded-2xl p-5 hover:border-red-300 transition shadow-sm hover:shadow-md bg-white space-y-4"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-base font-bold text-slate-900">
+                                {inv.warehouse_name || inv.warehouse_id}
+                              </h3>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Active Tranche
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">{inv.warehouse_location}</p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-red-50 text-red-600 border border-red-200">
+                            12.0% APY
                           </span>
                         </div>
-                        <div>
-                          <span className="text-[10px] text-slate-500 uppercase font-sans block">Token Price</span>
-                          <span className="font-semibold text-red-600">${inv.token_price || 1} USDC</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-500 uppercase font-sans block">Advance Rate</span>
-                          <span className="font-semibold text-slate-900">{inv.advance_rate || 75}%</span>
-                        </div>
-                      </div>
 
-                      {/* Token contract details & Buy Button */}
-                      <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-                        <div className="flex items-center gap-1 text-slate-500 font-mono">
-                          <span className="font-sans text-[11px]">Token:</span>
-                          <a
-                            href={`${EXPLORER_BASE}/address/${inv.inventory_token_address}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-red-600 hover:text-red-700 flex items-center gap-1 font-medium"
+                        {/* Financial specs grid */}
+                        <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono">
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase font-sans block">Valuation</span>
+                            <span className="font-semibold text-slate-900">
+                              ${inv.valuation ? inv.valuation.toLocaleString() : "N/A"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase font-sans block">Token Price</span>
+                            <span className="font-semibold text-red-600">
+                              ${tokenMetrics.currentMarketPrice.toFixed(2)} USDC
+                            </span>
+                            {tokenMetrics.salesProfitPercent > 0 && (
+                              <span className="text-[9px] text-emerald-600 font-bold block">
+                                +{tokenMetrics.salesProfitPercent.toFixed(1)}% sales profit
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase font-sans block">Physical Units</span>
+                            <span className="font-semibold text-slate-900">
+                              {inv.total_remaining_quantity || inv.total_initial_quantity || 0} in stock
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Token contract details & Buy Button */}
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                          <div className="flex items-center gap-1 text-slate-500 font-mono">
+                            <span className="font-sans text-[11px]">Token:</span>
+                            <a
+                              href={`${EXPLORER_BASE}/address/${inv.inventory_token_address}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-red-600 hover:text-red-700 flex items-center gap-1 font-medium"
+                            >
+                              {inv.inventory_token_address?.slice(0, 8)}...{inv.inventory_token_address?.slice(-4)}
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+
+                          {/* USER TOKEN PURCHASE ACTION */}
+                          <button
+                            onClick={() => openInvestModal(inv)}
+                            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-red-600/20 flex items-center gap-1.5 cursor-pointer"
                           >
-                            {inv.inventory_token_address?.slice(0, 8)}...{inv.inventory_token_address?.slice(-4)}
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
+                            <CreditCard className="w-3.5 h-3.5" />
+                            Buy Tokens
+                          </button>
                         </div>
-
-                        {/* USER TOKEN PURCHASE ACTION */}
-                        <button
-                          onClick={() => openInvestModal(inv)}
-                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-red-600/20 flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <CreditCard className="w-3.5 h-3.5" />
-                          Buy Tokens
-                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -2227,10 +2846,15 @@ export default function App() {
                           <span className="text-[10px] text-slate-500 block">{inv.warehouse_location}</span>
                         </td>
                         <td className="py-3.5 px-4 text-slate-800 font-sans">
-                          <p>{inv.total_initial_quantity} units</p>
+                          <p>{inv.total_initial_quantity} units total</p>
                           <p className="text-[10px] text-red-600 font-mono font-semibold">
                             {inv.valuation > 0 ? `$${inv.valuation.toLocaleString()} appraised` : 'Pending valuation'}
                           </p>
+                          {inv.status === 'FINANCED' && (
+                            <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                              <span>{inv.total_sold_quantity || 0} sold</span> &bull; <span>{inv.total_remaining_quantity || inv.total_initial_quantity || 0} left</span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 font-sans">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
@@ -2611,6 +3235,243 @@ export default function App() {
                     <>
                       <Coins className="w-4 h-4" />
                       Approve & Invest ${investAmount} USDC
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Physical Item Purchase Modal (Buyer) */}
+      {selectedItemForBuy && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-red-600" />
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Purchase Physical Inventory</h3>
+                  <p className="text-xs text-slate-500">
+                    Whitechain Mock USDC Settlement
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedItemForBuy(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {buyItemSuccessResult ? (
+              <div className="space-y-4 py-2">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-800 text-sm font-semibold">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                    <span>Physical Inventory Purchased Successfully!</span>
+                  </div>
+
+                  <div className="text-xs font-mono space-y-1.5 pt-1 border-t border-emerald-200/60">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Item Purchased:</span>
+                      <span className="text-slate-900 font-semibold">{buyItemSuccessResult.quantity}x {buyItemSuccessResult.itemName}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>SKU Tag:</span>
+                      <span className="text-slate-800">{buyItemSuccessResult.sku}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Total Paid:</span>
+                      <span className="text-red-600 font-bold">${buyItemSuccessResult.amountPaid.toLocaleString()} USDC</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Remaining Stock:</span>
+                      <span className="text-slate-900 font-medium">{buyItemSuccessResult.remainingStock} units in warehouse</span>
+                    </div>
+
+                    <div className="pt-2 border-t border-emerald-200/60">
+                      <span className="text-slate-500 text-[10px] uppercase font-sans font-semibold">Whitechain Transfer Receipt:</span>
+                      <a
+                        href={`${EXPLORER_BASE}/tx/${buyItemSuccessResult.txHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-red-600 hover:text-red-700 flex items-center gap-1 break-all font-medium mt-0.5"
+                      >
+                        {buyItemSuccessResult.txHash}
+                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Correlated Tranche Token Appreciation Callout */}
+                <div className="p-4 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-red-900">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <span>Tranche Token Market Value Increased!</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
+                    <div className="p-2 bg-white rounded-lg border border-red-100">
+                      <span className="text-[10px] text-slate-500 font-sans block">New Market Value</span>
+                      <span className="font-bold text-slate-900">
+                        ${buyItemSuccessResult.tokenMarketValue ? buyItemSuccessResult.tokenMarketValue.toFixed(4) : "1.0000"} USDC
+                      </span>
+                    </div>
+                    <div className="p-2 bg-white rounded-lg border border-red-100">
+                      <span className="text-[10px] text-slate-500 font-sans block">Realized Sales Profit</span>
+                      <span className="font-bold text-emerald-600">
+                        +{buyItemSuccessResult.salesProfitPercent ? buyItemSuccessResult.salesProfitPercent.toFixed(2) : "0.00"}%
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-red-700">
+                    This retail sale was automatically recorded in the protocol ERP ledger. Token holders are now enjoying live position appreciation on the Investor Dashboard!
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      setSelectedItemForBuy(null);
+                      handleSwitchToMarketplace();
+                    }}
+                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    <span>View in Investor Dashboard &rarr;</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedItemForBuy(null)}
+                    className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-medium transition cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Item Details Box */}
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-bold text-slate-900 text-sm">{selectedItemForBuy.item.name}</p>
+                      <p className="text-slate-500 font-mono text-[11px] mt-0.5">
+                        SKU: {selectedItemForBuy.item.sku} &bull; Batch: {selectedItemForBuy.item.batch_no || "BATCH-2026"}
+                      </p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                      {selectedItemForBuy.item.category || "Hardware"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 font-mono">
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase font-sans block">Unit Price:</span>
+                      <span className="font-bold text-red-600">${parseFloat(selectedItemForBuy.item.unit_price).toLocaleString()} USDC</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase font-sans block">Available Stock:</span>
+                      <span className="font-bold text-emerald-700">{selectedItemForBuy.item.quantity} units</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quantity Input Controls */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-slate-700">Purchase Quantity (Units)</label>
+                    <span className="text-[11px] text-slate-500">
+                      Max available: <strong className="text-slate-800">{selectedItemForBuy.item.quantity}</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBuyQuantity((prev) => Math.max(1, parseInt(prev, 10) - 1))}
+                      disabled={buyQuantity <= 1}
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-800 rounded-xl font-bold text-sm transition cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max={selectedItemForBuy.item.quantity}
+                      value={buyQuantity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (isNaN(val)) setBuyQuantity(1);
+                        else setBuyQuantity(Math.min(selectedItemForBuy.item.quantity, Math.max(1, val)));
+                      }}
+                      className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-center text-sm font-mono font-bold text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setBuyQuantity((prev) => Math.min(selectedItemForBuy.item.quantity, parseInt(prev, 10) + 1))}
+                      disabled={buyQuantity >= selectedItemForBuy.item.quantity}
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-800 rounded-xl font-bold text-sm transition cursor-pointer"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBuyQuantity(selectedItemForBuy.item.quantity)}
+                      className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-semibold transition cursor-pointer"
+                    >
+                      Max
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cost Calculation & Wallet Balance Check */}
+                <div className="p-3.5 bg-red-50/50 rounded-xl border border-red-200 space-y-2 text-xs">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Subtotal ({buyQuantity} x ${parseFloat(selectedItemForBuy.item.unit_price).toLocaleString()}):</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      ${(parseFloat(selectedItemForBuy.item.unit_price) * parseInt(buyQuantity || 1, 10)).toLocaleString()} USDC
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Escrow & Logistics Fee:</span>
+                    <span className="font-mono text-emerald-700 font-semibold">$0.00 (Subsidized)</span>
+                  </div>
+                  <div className="flex justify-between items-baseline pt-2 border-t border-red-200 font-bold text-sm">
+                    <span className="text-slate-900">Total Due (Mock USDC):</span>
+                    <span className="font-mono text-red-600 text-base">
+                      ${(parseFloat(selectedItemForBuy.item.unit_price) * parseInt(buyQuantity || 1, 10)).toLocaleString()} USDC
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px] pt-1 text-slate-500 border-t border-red-100">
+                    <span>Your Mock USDC Balance:</span>
+                    <span className="font-mono font-bold text-slate-800">${usdcBalance} USDC</span>
+                  </div>
+                </div>
+
+                {/* Purchase Button */}
+                <button
+                  onClick={handlePurchasePhysicalItem}
+                  disabled={isBuyingItem || buyQuantity <= 0 || buyQuantity > selectedItemForBuy.item.quantity}
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isBuyingItem ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>
+                        {buyItemStep === "transferring_usdc" ? "Transferring Mock USDC on Whitechain..." :
+                         buyItemStep === "waiting_confirmation" ? "Confirming block on Whitechain..." :
+                         "Updating inventory ledger & appreciating token value..."}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>
+                        Confirm & Pay ${(parseFloat(selectedItemForBuy.item.unit_price) * parseInt(buyQuantity || 1, 10)).toLocaleString()} USDC
+                      </span>
                     </>
                   )}
                 </button>
