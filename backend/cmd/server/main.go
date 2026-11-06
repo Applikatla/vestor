@@ -99,6 +99,9 @@ func main() {
 	// Core API Routes
 	api := r.Group("/api")
 	{
+		// Authentication
+		api.POST("/auth/login", handlers.HandleLogin())
+
 		// Company & Verification
 		api.POST("/companies/register", handlers.RegisterCompany)
 		api.POST("/investors/allowlist", handlers.AllowlistInvestor(vaultAddress))

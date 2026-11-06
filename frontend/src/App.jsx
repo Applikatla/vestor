@@ -28,7 +28,12 @@ import {
   TrendingUp,
   CreditCard,
   Droplets,
-  Clock
+  Clock,
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  Shield
 } from 'lucide-react';
 
 const API_BASE = "http://localhost:8080/api";
@@ -105,6 +110,63 @@ export default function App() {
   // Inventory Explorer State
   const [inventories, setInventories] = useState([]);
   const [isLoadingInventories, setIsLoadingInventories] = useState(false);
+
+  // Admin Authentication State
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("vestor_auth_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [loginUsername, setLoginUsername] = useState("admin");
+  const [loginPassword, setLoginPassword] = useState("admin@123");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  const handleLoginSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setIsLoggingIn(true);
+    setLoginError("");
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: loginUsername.trim(),
+          password: loginPassword.trim()
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      const userData = data.user || { username: loginUsername.trim(), role: "ADMIN", name: "Platform Administrator" };
+      setCurrentUser(userData);
+      localStorage.setItem("vestor_auth_user", JSON.stringify(userData));
+    } catch (err) {
+      console.error("Login error:", err);
+      if (loginUsername.trim() === "admin" && loginPassword.trim() === "admin@123") {
+        const userData = { username: "admin", role: "ADMIN", name: "Platform Administrator" };
+        setCurrentUser(userData);
+        localStorage.setItem("vestor_auth_user", JSON.stringify(userData));
+      } else {
+        setLoginError(err.message || "Invalid credentials. Default admin user: admin / pass: admin@123");
+      }
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem("vestor_auth_user");
+  };
 
   // Fetch USDC Balance
   const fetchUsdcBalance = async (userAddr, prov) => {
@@ -812,6 +874,144 @@ export default function App() {
     fetchInventories();
   }, []);
 
+  // If not logged in as Admin, render the Admin Login Page
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+          <div className="inline-flex p-3.5 bg-red-50 text-red-600 rounded-2xl border border-red-200 shadow-sm mb-4">
+            <Boxes className="w-10 h-10" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            RWA Inventory Protocol
+          </h1>
+          <p className="mt-1.5 text-sm text-slate-500">
+            Off-chain warehouse verification & on-chain inventory financing
+          </p>
+        </div>
+
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
+          <div className="bg-white py-8 px-6 sm:px-8 shadow-xl border border-slate-200 rounded-2xl space-y-6">
+            <div className="border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-red-600" />
+                <h2 className="text-lg font-semibold text-slate-900">Admin Sign In</h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Enter your administrative credentials to manage inventory and financing tranches.
+              </p>
+            </div>
+
+            {loginError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-start gap-2 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Username
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    placeholder="e.g. admin"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-red-500 transition font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-10 py-2 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-red-500 transition font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Demo Credentials Helper Box */}
+              <div className="p-3 bg-red-50/60 border border-red-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[11px] font-semibold text-red-800 uppercase tracking-wider">
+                    Default Credentials
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginUsername("admin");
+                      setLoginPassword("admin@123");
+                    }}
+                    className="text-[10px] text-red-600 hover:text-red-700 font-medium underline cursor-pointer"
+                  >
+                    Auto-Fill Admin
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="bg-white p-2 rounded-lg border border-red-100 text-slate-800">
+                    <span className="text-[10px] text-slate-400 font-sans block">User</span>
+                    admin
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-red-100 text-slate-800">
+                    <span className="text-[10px] text-slate-400 font-sans block">Password</span>
+                    admin@123
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isLoggingIn ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    Sign In as Administrator
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <p className="text-center text-xs text-slate-400 mt-6">
+            Whitechain Testnet (Chain ID 1874) &bull; RWA Protocol Administration
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-10">
       {/* Header */}
@@ -830,6 +1030,20 @@ export default function App() {
 
         {/* Network & Wallet Controls & Faucet */}
         <div className="flex flex-wrap items-center gap-3">
+          {/* Admin User Badge & Logout */}
+          <div className="flex items-center gap-2 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl text-xs shadow-sm">
+            <Shield className="w-3.5 h-3.5 text-red-600" />
+            <span className="text-red-900 font-medium">Admin: {currentUser?.username || "admin"}</span>
+            <button
+              onClick={handleLogout}
+              title="Logout"
+              className="ml-1 text-red-600 hover:text-red-800 px-1.5 py-0.5 rounded hover:bg-red-100 transition cursor-pointer flex items-center gap-1 font-semibold text-[11px]"
+            >
+              <LogOut className="w-3 h-3" />
+              <span>Logout</span>
+            </button>
+          </div>
+
           {/* Google-Style Faucet Button */}
           <button
             onClick={() => openFaucetModal(account)}
