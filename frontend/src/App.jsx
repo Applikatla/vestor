@@ -815,15 +815,15 @@ export default function App() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-10">
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+            <span className="p-2 bg-red-50 text-red-600 rounded-xl border border-red-200">
               <Boxes className="w-6 h-6" />
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-white">RWA Inventory Protocol</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">RWA Inventory Protocol</h1>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Off-chain warehouse verification & on-chain inventory asset tokenization
           </p>
         </div>
@@ -833,60 +833,60 @@ export default function App() {
           {/* Google-Style Faucet Button */}
           <button
             onClick={() => openFaucetModal(account)}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/30 hover:to-teal-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-semibold transition cursor-pointer shadow-sm shadow-emerald-500/10"
+            className="flex items-center gap-2 px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-semibold transition cursor-pointer shadow-sm shadow-red-500/10"
           >
-            <Droplets className="w-3.5 h-3.5 text-emerald-400" />
+            <Droplets className="w-3.5 h-3.5 text-red-600" />
             <span>Testnet Faucet</span>
-            <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">Daily</span>
+            <span className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">Daily</span>
           </button>
 
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-slate-300">Whitechain Testnet (1874)</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-slate-700 font-medium">Whitechain Testnet (1874)</span>
           </div>
 
           {account ? (
             <div className="relative">
               <button
                 onClick={() => setShowAccountDropdown(!showAccountDropdown)}
-                className="flex items-center gap-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3.5 py-1.5 rounded-xl transition cursor-pointer"
+                className="flex items-center gap-2.5 bg-white hover:bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-sm"
               >
                 {walletIcon ? (
                   <img src={walletIcon} alt={walletName} className="w-4 h-4 rounded-full" />
                 ) : (
-                  <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                 )}
                 <div className="text-left">
-                  <p className="text-xs font-mono font-medium text-slate-200 flex items-center gap-1">
+                  <p className="text-xs font-mono font-medium text-slate-800 flex items-center gap-1">
                     {account.slice(0, 6)}...{account.slice(-4)}
-                    <ChevronDown className="w-3 h-3 text-slate-500" />
+                    <ChevronDown className="w-3 h-3 text-slate-400" />
                   </p>
-                  <p className="text-[10px] text-slate-400 font-mono">
-                    {balance} WBT &bull; <span className="text-emerald-400 font-semibold">${usdcBalance} USDC</span>
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    {balance} WBT &bull; <span className="text-red-600 font-semibold">${usdcBalance} USDC</span>
                   </p>
                 </div>
               </button>
 
               {/* Account Dropdown Menu */}
               {showAccountDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 space-y-1">
-                  <div className="px-3 py-2 border-b border-slate-800 text-xs">
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl p-2 z-50 space-y-1">
+                  <div className="px-3 py-2 border-b border-slate-100 text-xs">
                     <p className="text-[10px] text-slate-400 uppercase font-semibold">Connected via</p>
-                    <p className="text-slate-200 font-medium">{walletName || "Browser Wallet"}</p>
-                    <p className="text-[10px] text-emerald-400 font-mono mt-0.5">${usdcBalance} USDC</p>
+                    <p className="text-slate-800 font-medium">{walletName || "Browser Wallet"}</p>
+                    <p className="text-[10px] text-red-600 font-mono mt-0.5">${usdcBalance} USDC</p>
                   </div>
                   <button
                     onClick={copyAddress}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition"
                   >
-                    <Copy className="w-3.5 h-3.5" />
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
                     {copied ? "Copied to clipboard!" : "Copy Address"}
                   </button>
                   <button
                     onClick={switchAccount}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
                     Switch / Add Account
                   </button>
                   <button
@@ -894,16 +894,16 @@ export default function App() {
                       disconnectWallet();
                       setIsWalletModalOpen(true);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition"
                   >
-                    <Wallet className="w-3.5 h-3.5" />
+                    <Wallet className="w-3.5 h-3.5 text-slate-500" />
                     Change Wallet
                   </button>
                   <button
                     onClick={disconnectWallet}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg transition"
                   >
-                    <LogOut className="w-3.5 h-3.5" />
+                    <LogOut className="w-3.5 h-3.5 text-red-500" />
                     Disconnect
                   </button>
                 </div>
@@ -913,7 +913,7 @@ export default function App() {
             <button
               onClick={() => setIsWalletModalOpen(true)}
               disabled={isConnecting}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-medium transition shadow-md shadow-red-600/20 disabled:opacity-50 cursor-pointer"
             >
               <Wallet className="w-4 h-4" />
               {isConnecting ? "Scanning..." : "Connect Wallet"}
@@ -924,48 +924,48 @@ export default function App() {
 
       {/* Faucet Notification Banner */}
       {faucetSuccessMsg && (
-        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           <span>{faucetSuccessMsg} Ready to invest in inventory tranches!</span>
         </div>
       )}
 
       {/* Google Cloud Web3 Faucet-Style Modal */}
       {isFaucetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-gradient-to-br from-indigo-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl">
+                <div className="p-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl">
                   <Droplets className="w-6 h-6" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-bold text-white">Whitechain Testnet Faucet</h3>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <h3 className="text-lg font-bold text-slate-900">Whitechain Testnet Faucet</h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
                       Gas Sponsored
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Google Cloud Web3-style testnet token & gas dispenser
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsFaucetModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Faucet Sponsor / Account Info */}
-            <div className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-xl space-y-1.5 text-xs font-mono">
-              <div className="flex items-center justify-between text-slate-400">
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs font-mono">
+              <div className="flex items-center justify-between text-slate-500">
                 <span className="font-sans text-[11px] uppercase tracking-wider text-slate-500">Faucet Sponsor Account:</span>
-                <span className="text-emerald-400 font-sans text-[10px] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-emerald-600 font-sans text-[10px] flex items-center gap-1 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   100% Free for Users
                 </span>
               </div>
@@ -974,12 +974,12 @@ export default function App() {
                   href={`${EXPLORER_BASE}/address/${faucetInfo?.faucet_address || '0x642D2B8a1de2307a1cab2a7b13d57F018d7C02ae'}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 truncate max-w-[280px]"
+                  className="text-red-600 hover:text-red-700 flex items-center gap-1 truncate max-w-[280px]"
                 >
                   {faucetInfo?.faucet_address || '0x642D2B8a1de2307a1cab2a7b13d57F018d7C02ae'}
                   <ExternalLink className="w-3 h-3 flex-shrink-0" />
                 </a>
-                <span className="text-slate-300">
+                <span className="text-slate-700 font-medium">
                   {faucetInfo?.faucet_reserve_wbt || '1.82'} WBT reserve
                 </span>
               </div>
@@ -987,29 +987,29 @@ export default function App() {
 
             {/* Package Allocation Cards */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
-                <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
+              <div className="p-3 bg-red-50/50 border border-red-200 rounded-xl">
+                <div className="flex items-center gap-1.5 text-red-600 text-xs font-semibold">
                   <Coins className="w-4 h-4" />
                   <span>Mock USDC</span>
                 </div>
-                <p className="text-lg font-bold text-white mt-1">10,000</p>
-                <p className="text-[10px] text-slate-400">Stablecoin for testing tranches</p>
+                <p className="text-lg font-bold text-slate-900 mt-1">10,000</p>
+                <p className="text-[10px] text-slate-500">Stablecoin for testing tranches</p>
               </div>
 
-              <div className="p-3 bg-indigo-500/5 border border-indigo-500/20 rounded-xl">
-                <div className="flex items-center gap-1.5 text-indigo-400 text-xs font-semibold">
-                  <Sparkles className="w-4 h-4 text-amber-300" />
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="flex items-center gap-1.5 text-slate-700 text-xs font-semibold">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
                   <span>Whitechain Gas</span>
                 </div>
-                <p className="text-lg font-bold text-white mt-1">0.05 WBT</p>
-                <p className="text-[10px] text-slate-400">Native gas for transactions</p>
+                <p className="text-lg font-bold text-slate-900 mt-1">0.05 WBT</p>
+                <p className="text-[10px] text-slate-500">Native gas for transactions</p>
               </div>
             </div>
 
             {/* Address Input & Paste Controls */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-slate-300">
+                <label className="text-xs font-medium text-slate-700">
                   Recipient EVM Address
                 </label>
                 {account && (
@@ -1019,7 +1019,7 @@ export default function App() {
                       setFaucetRecipientInput(account);
                       fetchFaucetInfo(account);
                     }}
-                    className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer font-medium"
+                    className="text-[11px] text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer font-medium"
                   >
                     Use Connected Wallet ({account.slice(0, 6)}...{account.slice(-4)})
                   </button>
@@ -1038,7 +1038,7 @@ export default function App() {
                       fetchFaucetInfo(val);
                     }
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500 transition pr-20"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white transition pr-20"
                 />
                 <button
                   type="button"
@@ -1053,7 +1053,7 @@ export default function App() {
                       console.log("Clipboard read restricted");
                     }
                   }}
-                  className="absolute right-2 top-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] rounded-lg transition cursor-pointer"
+                  className="absolute right-2 top-2 px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] rounded-lg transition cursor-pointer font-medium"
                 >
                   Paste
                 </button>
@@ -1061,19 +1061,19 @@ export default function App() {
 
               {/* Status Notice / Cooldown Warning */}
               {faucetCheckingEligibility && (
-                <p className="text-[11px] text-slate-400 flex items-center gap-1 font-mono">
-                  <RefreshCw className="w-3 h-3 animate-spin text-slate-500" />
+                <p className="text-[11px] text-slate-500 flex items-center gap-1 font-mono">
+                  <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />
                   Checking 24h eligibility...
                 </p>
               )}
 
               {faucetEligibilityError && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs flex items-start justify-between gap-2">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2">
-                    <Clock className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                    <Clock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="font-semibold">{faucetEligibilityError}</p>
-                      <p className="text-[10px] text-amber-400/80 mt-0.5">
+                      <p className="text-[10px] text-amber-700 mt-0.5">
                         Fixed daily policy: 1 claim every 24 hours per recipient address.
                       </p>
                     </div>
@@ -1081,7 +1081,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={handleResetCooldown}
-                    className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg text-[10px] font-medium transition cursor-pointer flex-shrink-0 whitespace-nowrap"
+                    className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 rounded-lg text-[10px] font-medium transition cursor-pointer flex-shrink-0 whitespace-nowrap"
                   >
                     Reset Cooldown (Demo)
                   </button>
@@ -1091,32 +1091,32 @@ export default function App() {
 
             {/* Success Display */}
             {faucetClaimResult && (
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-2 animate-in fade-in duration-200">
-                <p className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 animate-in fade-in duration-200">
+                <p className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   Tokens & Gas Successfully Dispatched!
                 </p>
                 <div className="space-y-1.5 text-xs font-mono pt-1">
-                  <div className="flex justify-between items-center text-slate-400">
+                  <div className="flex justify-between items-center text-slate-600">
                     <span>10,000 Mock USDC:</span>
                     <a
                       href={`${EXPLORER_BASE}/tx/${faucetClaimResult.usdc_tx}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                      className="text-red-600 hover:text-red-700 flex items-center gap-1 font-semibold"
                     >
                       {faucetClaimResult.usdc_tx.slice(0, 10)}...
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
                   {faucetClaimResult.gas_tx && (
-                    <div className="flex justify-between items-center text-slate-400">
+                    <div className="flex justify-between items-center text-slate-600">
                       <span>0.05 WBT Gas:</span>
                       <a
                         href={`${EXPLORER_BASE}/tx/${faucetClaimResult.gas_tx}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                        className="text-red-600 hover:text-red-700 flex items-center gap-1 font-semibold"
                       >
                         {faucetClaimResult.gas_tx.slice(0, 10)}...
                         <ExternalLink className="w-3 h-3" />
@@ -1124,7 +1124,7 @@ export default function App() {
                     </div>
                   )}
                 </div>
-                <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                <p className="text-[10px] text-slate-500 pt-1 border-t border-slate-200">
                   {faucetClaimResult.cooldown || "Next claim available in 24 hours."}
                 </p>
               </div>
@@ -1134,7 +1134,7 @@ export default function App() {
             <button
               onClick={handleExecuteClaimFaucet}
               disabled={isClaimingFaucet || !faucetRecipientInput || (faucetInfo?.eligibility && !faucetInfo.eligibility.eligible)}
-              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
             >
               {isClaimingFaucet ? (
                 <>
@@ -1154,18 +1154,18 @@ export default function App() {
 
       {/* Multi-Wallet Scanner Modal (EIP-6963) */}
       {isWalletModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-base font-semibold text-white">Select a Wallet</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <h3 className="text-base font-semibold text-slate-900">Select a Wallet</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
                   Detected {detectedWallets.length} installed wallet{detectedWallets.length === 1 ? '' : 's'} on your device
                 </p>
               </div>
               <button
                 onClick={() => setIsWalletModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1177,22 +1177,22 @@ export default function App() {
                   <button
                     key={wallet.info.uuid || wallet.info.rdns}
                     onClick={() => connectSpecificWallet(wallet)}
-                    className="w-full flex items-center justify-between p-3.5 bg-slate-950/60 hover:bg-indigo-600/10 border border-slate-800 hover:border-indigo-500/50 rounded-xl transition group text-left cursor-pointer"
+                    className="w-full flex items-center justify-between p-3.5 bg-slate-50 hover:bg-red-50/60 border border-slate-200 hover:border-red-300 rounded-xl transition group text-left cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       {wallet.info.icon ? (
                         <img
                           src={wallet.info.icon}
                           alt={wallet.info.name}
-                          className="w-8 h-8 rounded-lg flex-shrink-0 object-contain p-0.5 bg-slate-900"
+                          className="w-8 h-8 rounded-lg flex-shrink-0 object-contain p-0.5 bg-white border border-slate-200"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-200">
                           <Wallet className="w-4 h-4" />
                         </div>
                       )}
                       <div>
-                        <p className="text-sm font-medium text-slate-200 group-hover:text-white">
+                        <p className="text-sm font-medium text-slate-900 group-hover:text-red-700">
                           {wallet.info.name}
                         </p>
                         <p className="text-[11px] text-slate-500">
@@ -1200,15 +1200,15 @@ export default function App() {
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs text-indigo-400 font-medium group-hover:translate-x-0.5 transition-transform">
+                    <span className="text-xs text-red-600 font-medium group-hover:translate-x-0.5 transition-transform">
                       Connect &rarr;
                     </span>
                   </button>
                 ))
               ) : (
                 <div className="py-8 text-center space-y-3">
-                  <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
-                  <p className="text-xs text-slate-400">
+                  <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
+                  <p className="text-xs text-slate-500">
                     No Web3 wallets detected on this browser. <br />
                     Please install MetaMask, Rabby, or Coinbase Wallet extension.
                   </p>
@@ -1216,7 +1216,7 @@ export default function App() {
               )}
             </div>
 
-            <p className="text-[11px] text-center text-slate-500 pt-2 border-t border-slate-800/80">
+            <p className="text-[11px] text-center text-slate-400 pt-2 border-t border-slate-100">
               Scanned via EIP-6963 Multi-Provider Standard
             </p>
           </div>
@@ -1225,37 +1225,37 @@ export default function App() {
 
       {/* Global Contract Addresses Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-slate-900/60 border border-slate-800/80 p-3 rounded-xl">
-          <p className="text-[11px] text-slate-400 uppercase font-semibold">Inventory Registry</p>
+        <div className="bg-white border border-slate-200 p-3.5 rounded-xl shadow-sm">
+          <p className="text-[11px] text-slate-500 uppercase font-semibold">Inventory Registry</p>
           <a
             href={`${EXPLORER_BASE}/address/${deployments.contracts.InventoryRegistry}`}
             target="_blank"
             rel="noreferrer"
-            className="text-xs font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-1 truncate"
+            className="text-xs font-mono text-red-600 hover:text-red-700 flex items-center gap-1 mt-1 truncate font-medium"
           >
             {deployments.contracts.InventoryRegistry}
             <ExternalLink className="w-3 h-3 flex-shrink-0" />
           </a>
         </div>
-        <div className="bg-slate-900/60 border border-slate-800/80 p-3 rounded-xl">
-          <p className="text-[11px] text-slate-400 uppercase font-semibold">Global Financing Vault</p>
+        <div className="bg-white border border-slate-200 p-3.5 rounded-xl shadow-sm">
+          <p className="text-[11px] text-slate-500 uppercase font-semibold">Global Financing Vault</p>
           <a
             href={`${EXPLORER_BASE}/address/${deployments.contracts.FinancingVault}`}
             target="_blank"
             rel="noreferrer"
-            className="text-xs font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-1 truncate"
+            className="text-xs font-mono text-red-600 hover:text-red-700 flex items-center gap-1 mt-1 truncate font-medium"
           >
             {deployments.contracts.FinancingVault}
             <ExternalLink className="w-3 h-3 flex-shrink-0" />
           </a>
         </div>
-        <div className="bg-slate-900/60 border border-slate-800/80 p-3 rounded-xl">
-          <p className="text-[11px] text-slate-400 uppercase font-semibold">Mock USDC Stablecoin</p>
+        <div className="bg-white border border-slate-200 p-3.5 rounded-xl shadow-sm">
+          <p className="text-[11px] text-slate-500 uppercase font-semibold">Mock USDC Stablecoin</p>
           <a
             href={`${EXPLORER_BASE}/address/${deployments.contracts.MockUSDC}`}
             target="_blank"
             rel="noreferrer"
-            className="text-xs font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-1 truncate"
+            className="text-xs font-mono text-red-600 hover:text-red-700 flex items-center gap-1 mt-1 truncate font-medium"
           >
             {deployments.contracts.MockUSDC}
             <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -1265,11 +1265,11 @@ export default function App() {
 
       {/* Error Banner */}
       {errorMessage && (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-sm flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-400" />
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-900 text-sm flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600" />
           <div>
-            <p className="font-medium">Action Encountered an Error</p>
-            <p className="text-xs mt-0.5 text-rose-400">{errorMessage}</p>
+            <p className="font-semibold text-red-900">Action Encountered an Error</p>
+            <p className="text-xs mt-0.5 text-red-700 break-all">{errorMessage}</p>
           </div>
         </div>
       )}
@@ -1278,15 +1278,15 @@ export default function App() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
         {/* Step 1: Input & DB Storage */}
-        <div className="lg:col-span-7 bg-slate-900/40 border border-slate-800 rounded-2xl p-6 space-y-6">
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
+              <span className="w-6 h-6 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">
                 1
               </span>
-              <h2 className="text-lg font-semibold text-white">Submit Physical Inventory Details</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Submit Physical Inventory Details</h2>
             </div>
-            <span className="text-xs bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full">
+            <span className="text-xs bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-full font-medium">
               Off-chain Go & DB
             </span>
           </div>
@@ -1294,54 +1294,54 @@ export default function App() {
           <form onSubmit={handleStoreInDB} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Warehouse ID</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Warehouse ID</label>
                 <input
                   type="text"
                   value={warehouseId}
                   onChange={(e) => setWarehouseId(e.target.value)}
                   required
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white transition"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Warehouse Location</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Warehouse Location</label>
                 <input
                   type="text"
                   value={warehouseLocation}
                   onChange={(e) => setWarehouseLocation(e.target.value)}
                   required
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white transition"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Warehouse Facility Name</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Warehouse Facility Name</label>
               <input
                 type="text"
                 value={warehouseName}
                 onChange={(e) => setWarehouseName(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white transition"
               />
             </div>
 
             {/* SKU Items List */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                   Inventory Items / SKUs
                 </label>
                 <button
                   type="button"
                   onClick={addItem}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium cursor-pointer"
+                  className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1 font-semibold cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add SKU
                 </button>
               </div>
 
               {items.map((item, index) => (
-                <div key={index} className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-3">
+                <div key={index} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <input
                       type="text"
@@ -1349,7 +1349,7 @@ export default function App() {
                       value={item.sku}
                       onChange={(e) => updateItem(index, 'sku', e.target.value)}
                       required
-                      className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200"
+                      className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-500"
                     />
                     <input
                       type="text"
@@ -1357,14 +1357,14 @@ export default function App() {
                       value={item.name}
                       onChange={(e) => updateItem(index, 'name', e.target.value)}
                       required
-                      className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200"
+                      className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-500"
                     />
                     <input
                       type="text"
                       placeholder="Category"
                       value={item.category}
                       onChange={(e) => updateItem(index, 'category', e.target.value)}
-                      className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200"
+                      className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-500"
                     />
                   </div>
 
@@ -1377,7 +1377,7 @@ export default function App() {
                         value={item.quantity}
                         onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                         required
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200"
+                        className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-500"
                       />
                     </div>
                     <div>
@@ -1389,7 +1389,7 @@ export default function App() {
                         value={item.unit_price}
                         onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
                         required
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200"
+                        className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-500"
                       />
                     </div>
                     <div>
@@ -1398,7 +1398,7 @@ export default function App() {
                         type="text"
                         value={item.batch_number}
                         onChange={(e) => updateItem(index, 'batch_number', e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200"
+                        className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-500"
                       />
                     </div>
                     {items.length > 1 && (
@@ -1406,7 +1406,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => removeItem(index)}
-                          className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer"
+                          className="text-slate-400 hover:text-red-600 p-1 cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1418,8 +1418,8 @@ export default function App() {
             </div>
 
             {/* Document Verification */}
-            <div className="space-y-2 pt-2 border-t border-slate-800/80">
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block">
+            <div className="space-y-2 pt-2 border-t border-slate-200">
+              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
                 Warehouse Audit Proof
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1428,14 +1428,14 @@ export default function App() {
                   placeholder="Document Name"
                   value={docName}
                   onChange={(e) => setDocName(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"
+                  className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white transition"
                 />
                 <input
                   type="text"
                   placeholder="IPFS URI"
                   value={docUri}
                   onChange={(e) => setDocUri(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"
+                  className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white transition"
                 />
               </div>
             </div>
@@ -1444,7 +1444,7 @@ export default function App() {
             <button
               type="submit"
               disabled={isSubmittingDB}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmittingDB ? (
                 <>
@@ -1463,52 +1463,52 @@ export default function App() {
 
         {/* Step 2: Confirmation & On-Chain Trigger */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <span className="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center">
+                <span className="w-6 h-6 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">
                   2
                 </span>
-                <h2 className="text-lg font-semibold text-white">Trigger Blockchain Anchor</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Trigger Blockchain Anchor</h2>
               </div>
-              <span className="text-xs bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full">
+              <span className="text-xs bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-full font-medium">
                 Ethers.js & Wallet
               </span>
             </div>
 
             {dbResult ? (
               <div className="space-y-5">
-                <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs flex items-center gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2.5 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                   <span>Inventory successfully verified & stored in DB!</span>
                 </div>
 
-                <div className="space-y-3 bg-slate-950/70 p-4 rounded-xl border border-slate-800 text-xs space-y-2.5 font-mono">
+                <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs font-mono">
                   <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-sans">Inventory ID (bytes32):</span>
-                    <p className="text-indigo-400 break-all select-all">{dbResult.inventory_id}</p>
+                    <span className="text-slate-500 text-[10px] uppercase font-sans font-semibold">Inventory ID (bytes32):</span>
+                    <p className="text-red-600 break-all select-all font-medium">{dbResult.inventory_id}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-sans">Canonical Record Hash:</span>
-                    <p className="text-amber-400 break-all select-all">{dbResult.canonical_record_hash}</p>
+                    <span className="text-slate-500 text-[10px] uppercase font-sans font-semibold">Canonical Record Hash:</span>
+                    <p className="text-slate-900 break-all select-all font-medium">{dbResult.canonical_record_hash}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-sans">Target Contract:</span>
-                    <p className="text-slate-300 break-all">{dbResult.blockchain_call.contract_address}</p>
+                    <span className="text-slate-500 text-[10px] uppercase font-sans font-semibold">Target Contract:</span>
+                    <p className="text-slate-700 break-all font-medium">{dbResult.blockchain_call.contract_address}</p>
                   </div>
                 </div>
 
                 {txSuccess ? (
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-2">
-                    <p className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                    <p className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                       Registration Mined on Whitechain!
                     </p>
                     <a
                       href={`${EXPLORER_BASE}/tx/${txHash}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1 break-all"
+                      className="text-xs font-mono text-red-600 hover:text-red-700 flex items-center gap-1 break-all font-medium"
                     >
                       {txHash}
                       <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -1518,7 +1518,7 @@ export default function App() {
                   <button
                     onClick={handleTriggerTx}
                     disabled={isSigningTx}
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isSigningTx ? (
                       <>
@@ -1535,10 +1535,10 @@ export default function App() {
                 )}
               </div>
             ) : (
-              <div className="py-12 text-center text-slate-500 text-xs">
-                <Warehouse className="w-8 h-8 mx-auto mb-2.5 opacity-40" />
+              <div className="py-12 text-center text-slate-400 text-xs">
+                <Warehouse className="w-8 h-8 mx-auto mb-2.5 text-slate-300" />
                 Fill the form on the left and click <br />
-                <span className="text-slate-400 font-medium">"Validate & Store in Database"</span> to generate <br />
+                <span className="text-slate-700 font-medium">"Validate & Store in Database"</span> to generate <br />
                 the canonical hash and enable on-chain signing.
               </div>
             )}
@@ -1548,21 +1548,21 @@ export default function App() {
 
       {/* Tokenization / Deploy ERC20 Modal */}
       {selectedInventoryForTokenize && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-400" />
+                <Sparkles className="w-5 h-5 text-red-600" />
                 <div>
-                  <h3 className="text-base font-semibold text-white">Deploy InventoryERC20 Token</h3>
-                  <p className="text-xs text-slate-400">
+                  <h3 className="text-base font-semibold text-slate-900">Deploy InventoryERC20 Token</h3>
+                  <p className="text-xs text-slate-500">
                     Fractional financing tranche for {selectedInventoryForTokenize.warehouse_name}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedInventoryForTokenize(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1570,31 +1570,31 @@ export default function App() {
 
             {deployedTokenResult ? (
               <div className="space-y-4 py-2">
-                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-2">
-                  <p className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                  <p className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     InventoryERC20 Deployed & Registered in Vault!
                   </p>
                   <div className="text-xs font-mono space-y-1.5 pt-1">
                     <div>
-                      <span className="text-slate-400 text-[10px] uppercase font-sans">Token Contract:</span>
+                      <span className="text-slate-500 text-[10px] uppercase font-sans font-semibold">Token Contract:</span>
                       <a
                         href={`${EXPLORER_BASE}/address/${deployedTokenResult.tokenAddress}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 break-all"
+                        className="text-red-600 hover:text-red-700 flex items-center gap-1 break-all font-medium"
                       >
                         {deployedTokenResult.tokenAddress}
                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
                       </a>
                     </div>
                     <div>
-                      <span className="text-slate-400 text-[10px] uppercase font-sans">Vault Registration Tx:</span>
+                      <span className="text-slate-500 text-[10px] uppercase font-sans font-semibold">Vault Registration Tx:</span>
                       <a
                         href={`${EXPLORER_BASE}/tx/${deployedTokenResult.vaultTxHash}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-amber-400 hover:text-amber-300 flex items-center gap-1 break-all"
+                        className="text-red-600 hover:text-red-700 flex items-center gap-1 break-all font-medium"
                       >
                         {deployedTokenResult.vaultTxHash}
                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -1605,7 +1605,7 @@ export default function App() {
 
                 <button
                   onClick={() => setSelectedInventoryForTokenize(null)}
-                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-medium transition cursor-pointer"
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-medium transition cursor-pointer"
                 >
                   Close
                 </button>
@@ -1614,71 +1614,71 @@ export default function App() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Token Name</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Token Name</label>
                     <input
                       type="text"
                       value={tokenName}
                       onChange={(e) => setTokenName(e.target.value)}
                       required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Token Symbol</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Token Symbol</label>
                     <input
                       type="text"
                       value={tokenSymbol}
                       onChange={(e) => setTokenSymbol(e.target.value)}
                       required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Capital Target (USDC)</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Capital Target (USDC)</label>
                     <input
                       type="number"
                       value={targetCapital}
                       onChange={(e) => setTargetCapital(e.target.value)}
                       required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Token Price (USDC)</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Token Price (USDC)</label>
                     <input
                       type="number"
                       step="0.1"
                       value={tokenPrice}
                       onChange={(e) => setTokenPrice(e.target.value)}
                       required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Advance Rate (%)</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Advance Rate (%)</label>
                     <input
                       type="number"
                       value={advanceRate}
                       onChange={(e) => setAdvanceRate(e.target.value)}
                       required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white"
                     />
                   </div>
                 </div>
 
-                <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs space-y-1">
-                  <div className="flex justify-between text-slate-400">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                  <div className="flex justify-between text-slate-500">
                     <span>Calculated Token Supply:</span>
-                    <span className="text-slate-200 font-mono">
+                    <span className="text-slate-900 font-mono font-medium">
                       {(parseFloat(targetCapital || 0) / parseFloat(tokenPrice || 1)).toLocaleString()} {tokenSymbol}
                     </span>
                   </div>
-                  <div className="flex justify-between text-slate-400">
+                  <div className="flex justify-between text-slate-500">
                     <span>Issuer Capital Advance:</span>
-                    <span className="text-emerald-400 font-mono">
+                    <span className="text-red-600 font-mono font-semibold">
                       ${((parseFloat(targetCapital || 0) * parseFloat(advanceRate || 0)) / 100).toLocaleString()} USDC
                     </span>
                   </div>
@@ -1687,7 +1687,7 @@ export default function App() {
                 <button
                   onClick={handleDeployToken}
                   disabled={isDeployingToken}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isDeployingToken ? (
                     <>
@@ -1709,21 +1709,21 @@ export default function App() {
 
       {/* Invest / Buy Tokens Modal */}
       {selectedInventoryForInvest && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-emerald-400" />
+                <CreditCard className="w-5 h-5 text-red-600" />
                 <div>
-                  <h3 className="text-base font-semibold text-white">Invest & Buy Inventory Tokens</h3>
-                  <p className="text-xs text-slate-400">
+                  <h3 className="text-base font-semibold text-slate-900">Invest & Buy Inventory Tokens</h3>
+                  <p className="text-xs text-slate-500">
                     Deposit Mock USDC into Financing Vault
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedInventoryForInvest(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1731,27 +1731,27 @@ export default function App() {
 
             {investSuccessResult ? (
               <div className="space-y-4 py-2">
-                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-2">
-                  <p className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                  <p className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     Investment Confirmed! Tokens Minted!
                   </p>
                   <div className="text-xs font-mono space-y-1.5 pt-1">
-                    <div className="flex justify-between text-slate-400">
+                    <div className="flex justify-between text-slate-600">
                       <span>Deposited:</span>
-                      <span className="text-white">${investSuccessResult.amountUSDC} USDC</span>
+                      <span className="text-slate-900 font-medium">${investSuccessResult.amountUSDC} USDC</span>
                     </div>
-                    <div className="flex justify-between text-slate-400">
+                    <div className="flex justify-between text-slate-600">
                       <span>Tokens Received:</span>
-                      <span className="text-emerald-400 font-semibold">{investSuccessResult.tokensReceived} Tokens</span>
+                      <span className="text-red-600 font-semibold">{investSuccessResult.tokensReceived} Tokens</span>
                     </div>
-                    <div className="pt-2 border-t border-slate-800/80">
-                      <span className="text-slate-400 text-[10px] uppercase font-sans">Deposit Transaction:</span>
+                    <div className="pt-2 border-t border-slate-200">
+                      <span className="text-slate-500 text-[10px] uppercase font-sans font-semibold">Deposit Transaction:</span>
                       <a
                         href={`${EXPLORER_BASE}/tx/${investSuccessResult.txHash}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 break-all"
+                        className="text-red-600 hover:text-red-700 flex items-center gap-1 break-all font-medium"
                       >
                         {investSuccessResult.txHash}
                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -1762,32 +1762,32 @@ export default function App() {
 
                 <button
                   onClick={() => setSelectedInventoryForInvest(null)}
-                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-medium transition cursor-pointer"
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-medium transition cursor-pointer"
                 >
                   Close
                 </button>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs space-y-2">
-                  <div className="flex justify-between text-slate-400">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+                  <div className="flex justify-between text-slate-500">
                     <span>Tranche Token:</span>
-                    <span className="text-slate-200 font-mono">
+                    <span className="text-slate-900 font-mono font-medium">
                       {selectedInventoryForInvest.inventory_token_address?.slice(0, 10)}...
                     </span>
                   </div>
-                  <div className="flex justify-between text-slate-400">
+                  <div className="flex justify-between text-slate-500">
                     <span>Token Price:</span>
-                    <span className="text-white font-mono">${selectedInventoryForInvest.token_price || 1} USDC</span>
+                    <span className="text-slate-900 font-mono font-medium">${selectedInventoryForInvest.token_price || 1} USDC</span>
                   </div>
-                  <div className="flex justify-between text-slate-400">
+                  <div className="flex justify-between text-slate-500">
                     <span>Your USDC Balance:</span>
-                    <span className="text-emerald-400 font-mono">${usdcBalance} USDC</span>
+                    <span className="text-red-600 font-mono font-semibold">${usdcBalance} USDC</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
                     Investment Amount (USDC)
                   </label>
                   <div className="relative">
@@ -1797,12 +1797,12 @@ export default function App() {
                       value={investAmount}
                       onChange={(e) => setInvestAmount(e.target.value)}
                       required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-8 pr-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white font-mono"
                     />
-                    <DollarSign className="w-4 h-4 text-slate-500 absolute left-2.5 top-3" />
+                    <DollarSign className="w-4 h-4 text-slate-400 absolute left-2.5 top-3" />
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    You will receive: <span className="text-emerald-400 font-semibold font-mono">
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    You will receive: <span className="text-red-600 font-semibold font-mono">
                       {(parseFloat(investAmount || 0) / parseFloat(selectedInventoryForInvest.token_price || 1)).toLocaleString()} Tokens
                     </span>
                   </p>
@@ -1811,7 +1811,7 @@ export default function App() {
                 <button
                   onClick={handleInvestInTranche}
                   disabled={isInvesting || parseFloat(investAmount || 0) <= 0}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isInvesting ? (
                     <>
@@ -1834,12 +1834,12 @@ export default function App() {
       )}
 
       {/* Section 3: Registered Inventories Live Table */}
-      <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 space-y-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileCheck className="w-5 h-5 text-indigo-400" />
-            <h3 className="text-base font-semibold text-white">Registered Inventories</h3>
-            <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">
+            <FileCheck className="w-5 h-5 text-red-600" />
+            <h3 className="text-base font-semibold text-slate-900">Registered Inventories</h3>
+            <span className="text-xs bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full font-medium">
               {inventories.length} batches
             </span>
           </div>
@@ -1847,7 +1847,7 @@ export default function App() {
           <button
             onClick={fetchInventories}
             disabled={isLoadingInventories}
-            className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition cursor-pointer"
+            className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition cursor-pointer font-medium"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoadingInventories ? 'animate-spin' : ''}`} />
             Refresh
@@ -1855,11 +1855,11 @@ export default function App() {
         </div>
 
         {inventories.length === 0 ? (
-          <p className="text-xs text-slate-500 py-6 text-center">No inventory batches registered yet.</p>
+          <p className="text-xs text-slate-400 py-6 text-center">No inventory batches registered yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/60 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
+              <thead className="bg-slate-50 text-slate-600 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4">Inventory ID</th>
                   <th className="py-3 px-4">Warehouse</th>
@@ -1869,30 +1869,30 @@ export default function App() {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
+              <tbody className="divide-y divide-slate-100 font-mono">
                 {inventories.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-900/40 transition">
-                    <td className="py-3.5 px-4 font-medium text-slate-200">
+                  <tr key={inv.id} className="hover:bg-slate-50/80 transition">
+                    <td className="py-3.5 px-4 font-medium text-slate-900">
                       <div className="truncate max-w-[150px]" title={inv.inventory_id}>
                         {inv.inventory_id ? `${inv.inventory_id.slice(0, 10)}...${inv.inventory_id.slice(-6)}` : inv.id}
                       </div>
                       <span className="text-[10px] text-slate-500 font-sans block">{inv.warehouse_name}</span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-300 font-sans">
+                    <td className="py-3.5 px-4 text-slate-700 font-sans">
                       {inv.warehouse_id}
                       <span className="text-[10px] text-slate-500 block">{inv.warehouse_location}</span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-200 font-sans">
+                    <td className="py-3.5 px-4 text-slate-800 font-sans">
                       <p>{inv.total_initial_quantity} units</p>
-                      <p className="text-[10px] text-emerald-400 font-mono">
+                      <p className="text-[10px] text-red-600 font-mono font-semibold">
                         {inv.valuation > 0 ? `$${inv.valuation.toLocaleString()} appraised` : 'Pending valuation'}
                       </p>
                     </td>
                     <td className="py-3.5 px-4 font-sans">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${inv.status === 'REGISTERED' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' :
-                        inv.status === 'APPROVED' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
-                          inv.status === 'FINANCED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                            'bg-slate-800 text-slate-400'
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${inv.status === 'REGISTERED' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                        inv.status === 'APPROVED' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                          inv.status === 'FINANCED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                            'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}>
                         {inv.status}
                       </span>
@@ -1905,7 +1905,7 @@ export default function App() {
                             href={`${EXPLORER_BASE}/address/${inv.inventory_token_address}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                            className="text-red-600 hover:text-red-700 flex items-center gap-1 font-medium"
                           >
                             {inv.inventory_token_address.slice(0, 8)}...
                             <ExternalLink className="w-3 h-3" />
@@ -1918,14 +1918,14 @@ export default function App() {
                             href={`${EXPLORER_BASE}/tx/${inv.registration_tx_hash}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                            className="text-red-600 hover:text-red-700 flex items-center gap-1 font-medium"
                           >
                             {inv.registration_tx_hash.slice(0, 8)}...
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
                       ) : (
-                        <span className="text-slate-600 font-sans">Pending Tx</span>
+                        <span className="text-slate-400 font-sans">Pending Tx</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-right font-sans">
@@ -1933,7 +1933,7 @@ export default function App() {
                         <button
                           onClick={() => handleApproveInspection(inv)}
                           disabled={isInspecting}
-                          className="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ml-auto"
+                          className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-[11px] font-semibold transition cursor-pointer flex items-center gap-1 ml-auto"
                         >
                           <ShieldCheck className="w-3 h-3" />
                           Inspect & Approve
@@ -1943,7 +1943,7 @@ export default function App() {
                       {inv.status === 'APPROVED' && (
                         <button
                           onClick={() => openTokenizeModal(inv)}
-                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-semibold transition cursor-pointer shadow-lg shadow-indigo-600/20 flex items-center gap-1 ml-auto"
+                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[11px] font-semibold transition cursor-pointer shadow-sm shadow-red-600/20 flex items-center gap-1 ml-auto"
                         >
                           <Coins className="w-3 h-3" />
                           Deploy ERC20
@@ -1953,7 +1953,7 @@ export default function App() {
                       {inv.status === 'FINANCED' && (
                         <button
                           onClick={() => openInvestModal(inv)}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-semibold transition cursor-pointer shadow-lg shadow-emerald-600/20 flex items-center gap-1 ml-auto"
+                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[11px] font-semibold transition cursor-pointer shadow-sm shadow-red-600/20 flex items-center gap-1 ml-auto"
                         >
                           <CreditCard className="w-3 h-3" />
                           Buy Tokens
