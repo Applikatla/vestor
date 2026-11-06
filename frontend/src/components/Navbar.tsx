@@ -49,7 +49,7 @@ export function Navbar() {
             Whitechain Sepolia (1874)
           </span>
           <span className="text-slate-400 hidden md:inline text-[11px]">
-            | Institutional Credit Facility Protocol V1.0
+            | VESTOR RWA Protocol V1.0
           </span>
         </div>
         <div className="flex items-center gap-3 text-slate-400 text-[10px] sm:text-[11px] font-mono shrink-0">
@@ -71,12 +71,12 @@ export function Navbar() {
         <div className="flex items-center gap-3 sm:gap-6 shrink-0">
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-sm shrink-0">
-              IC
+              V
             </div>
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="font-bold text-sm sm:text-base text-slate-900 tracking-tight whitespace-nowrap">
-                  InventoryCredit
+                  VESTOR
                 </span>
                 <span className="hidden sm:inline-block text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
                   RWA Desk

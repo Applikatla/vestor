@@ -5,9 +5,9 @@ import { ToastProvider } from "../components/Toast";
 import { Web3Provider } from "../context/Web3Context";
 
 export const metadata = {
-  title: "InventoryCredit | Institutional Warehouse Asset Tokenization & Settlement",
+  title: "VESTOR | Institutional Real World Asset (RWA) Tokenization & Settlement on Whitechain",
   description:
-    "Enterprise RWA credit facility and continuous settlement desk deployed on Whitechain Sepolia (Chain ID: 1874).",
+    "Institutional RWA credit facility and continuous settlement desk deployed on Whitechain Sepolia (Chain ID: 1874).",
 };
 
 export default function RootLayout({

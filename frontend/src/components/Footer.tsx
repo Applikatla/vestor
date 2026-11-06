@@ -14,10 +14,10 @@ export function Footer() {
           <div className="space-y-3 md:col-span-2">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
-                IC
+                V
               </div>
               <span className="font-bold text-sm text-slate-900">
-                InventoryCredit Protocol
+                VESTOR Protocol
               </span>
             </div>
             <p className="text-slate-600 text-xs leading-relaxed max-w-md">
@@ -127,7 +127,7 @@ export function Footer() {
         </div>
 
         <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-4 text-center sm:text-left">
-          <p>© 2026 InventoryCredit Protocol. Enterprise Real-World Asset (RWA) Architecture.</p>
+          <p>© 2026 VESTOR Protocol. Enterprise Real-World Asset (RWA) Architecture.</p>
           <div className="flex items-center gap-3 sm:gap-4 font-mono flex-wrap justify-center sm:justify-end">
             <span>Deterministic Double-Entry Ledger</span>
             <span className="hidden sm:inline">•</span>
