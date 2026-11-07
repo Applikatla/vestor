@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"tokenization_inventory/backend/internal/database"
 	"tokenization_inventory/backend/internal/domain"
 	"tokenization_inventory/backend/internal/inventory"
@@ -19,6 +19,8 @@ import (
 	"tokenization_inventory/backend/internal/outbox"
 	"tokenization_inventory/backend/internal/sales"
 	"tokenization_inventory/backend/internal/valuation"
+
+	"github.com/google/uuid"
 )
 
 // Active Whitechain Sepolia Contracts (Chain ID 1874)
@@ -28,7 +30,43 @@ const (
 	DefaultIssuerAddress   = "0x96bDC6b5dFB67deBbae37Ec582193c61217d13B6"
 )
 
+func loadEnv() {
+	candidates := []string{".env", "../.env", "../../.env", "backend/.env"}
+	for _, p := range candidates {
+		f, err := os.Open(p)
+		if err != nil {
+			continue
+		}
+		defer f.Close()
+
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) == 2 {
+				k := strings.TrimSpace(parts[0])
+				v := strings.TrimSpace(parts[1])
+				// Strip surrounding quotes
+				if (strings.HasPrefix(v, `"`) && strings.HasSuffix(v, `"`)) ||
+					(strings.HasPrefix(v, `'`) && strings.HasSuffix(v, `'`)) {
+					v = v[1 : len(v)-1]
+				}
+				if os.Getenv(k) == "" {
+					os.Setenv(k, v)
+				}
+			}
+		}
+		log.Printf("[ENV] Loaded environment configuration from: %s\n", p)
+		return
+	}
+}
+
 func main() {
+	loadEnv()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -59,6 +97,9 @@ func main() {
 	} else {
 		// Run initial migrations
 		migrationPath := filepath.Join("migrations", "000001_initial_schema.up.sql")
+		if _, err := os.Stat(migrationPath); os.IsNotExist(err) {
+			migrationPath = filepath.Join("backend", "migrations", "000001_initial_schema.up.sql")
+		}
 		if err := db.RunMigrations(ctx, migrationPath); err != nil {
 			log.Printf("[DB MIGRATION WARNING] %v\n", err)
 		}
@@ -80,10 +121,10 @@ func main() {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":          "healthy",
-			"service":         "inventory-tokenization-backend",
-			"database":        dbStatus,
-			"adapter_url":     adapterURL,
+			"status":           "healthy",
+			"service":          "inventory-tokenization-backend",
+			"database":         dbStatus,
+			"adapter_url":      adapterURL,
 			"registry_sepolia": DefaultRegistryAddress,
 			"factory_sepolia":  DefaultFactoryAddress,
 		})
