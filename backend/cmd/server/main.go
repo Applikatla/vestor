@@ -59,6 +59,11 @@ func loadEnv() {
 				}
 			}
 		}
+
+		if err := scanner.Err(); err != nil {
+			log.Printf("[ENV WARNING] Error reading %s: %v\n", p, err)
+		}
+
 		log.Printf("[ENV] Loaded environment configuration from: %s\n", p)
 		return
 	}
