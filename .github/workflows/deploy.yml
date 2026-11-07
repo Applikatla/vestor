@@ -136,3 +136,4 @@ jobs:
             echo "✓ Frontend Healthy (port 3000)"
 
             echo "=== All services deployed and healthy! ==="
+
