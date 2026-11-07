@@ -14,7 +14,8 @@ cd "$PROJECT_DIR"
 
 # 1. Pull latest code
 echo -e "\n[1/4] Pulling latest code from origin/main..."
-git pull origin main
+git fetch origin main
+git reset --hard origin/main
 
 # 2. Backend deployment (Go)
 echo -e "\n[2/4] Deploying Backend (Go)..."

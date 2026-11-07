@@ -91,7 +91,8 @@ jobs:
 
             cd "$PROJECT_DIR"
             echo "=== Step 1: Pull Latest Code ==="
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "=== Step 2: Build & Restart Backend (Go) ==="
             cd "$PROJECT_DIR/backend"
