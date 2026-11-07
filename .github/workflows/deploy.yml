@@ -1,0 +1,138 @@
+name: Vestor CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # ==============================================================================
+  # Phase 1: Continuous Integration (CI) - Automated Testing & Build Verification
+  # ==============================================================================
+  ci-backend:
+    name: Backend CI (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: backend/go.sum
+
+      - name: Download Go Modules
+        run: |
+          cd backend
+          go mod download
+
+      - name: Run Backend Unit Tests
+        run: |
+          cd backend
+          go test -v ./...
+
+      - name: Build Go Server Binary
+        run: |
+          cd backend
+          go build -v -o bin/server cmd/server/main.go
+
+  ci-frontend:
+    name: Frontend CI (Next.js)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build Next.js Application
+        run: |
+          cd frontend
+          npm run build
+
+  # ==============================================================================
+  # Phase 2: Continuous Deployment (CD) - Production Deployment to EC2
+  # ==============================================================================
+  deploy:
+    name: Deploy to Server
+    needs: [ci-backend, ci-frontend]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER || 'ubuntu' }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+            PROJECT_DIR="$HOME/vestor"
+            
+            if [ ! -d "$PROJECT_DIR" ]; then
+              echo "Error: Directory $PROJECT_DIR not found on server!"
+              exit 1
+            fi
+
+            cd "$PROJECT_DIR"
+            echo "=== Step 1: Pull Latest Code ==="
+            git pull origin main
+
+            echo "=== Step 2: Build & Restart Backend (Go) ==="
+            cd "$PROJECT_DIR/backend"
+            go mod download
+            mkdir -p bin
+            go build -o bin/server cmd/server/main.go
+
+            # Restart backend using PM2, systemd, or process manager
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 restart vestor-backend || pm2 start bin/server --name "vestor-backend"
+            elif systemctl is-active --quiet vestor-backend; then
+              sudo systemctl restart vestor-backend
+            else
+              pkill -f "bin/server" || true
+              nohup ./bin/server > "$PROJECT_DIR/backend/server.log" 2>&1 &
+            fi
+
+            echo "=== Step 3: Build & Restart Frontend (Next.js) ==="
+            cd "$PROJECT_DIR/frontend"
+            npm ci
+            npm run build
+
+            # Restart frontend using PM2, systemd, or process manager
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 restart vestor-frontend || pm2 start npm --name "vestor-frontend" -- start -- -p 3000
+            elif systemctl is-active --quiet vestor-frontend; then
+              sudo systemctl restart vestor-frontend
+            else
+              pkill -f "next-server" || true
+              nohup npm start > "$PROJECT_DIR/frontend/frontend.log" 2>&1 &
+            fi
+
+            echo "=== Step 4: Health Checks ==="
+            sleep 5
+
+            echo "Testing Backend /health endpoint..."
+            curl -s -f http://localhost:8080/health || (echo "Backend health check failed!" && exit 1)
+            echo "✓ Backend Healthy (port 8080)"
+
+            echo "Testing Frontend endpoint..."
+            curl -s -f http://localhost:3000 >/dev/null || (echo "Frontend health check failed!" && exit 1)
+            echo "✓ Frontend Healthy (port 3000)"
+
+            echo "=== All services deployed and healthy! ==="

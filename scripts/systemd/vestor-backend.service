@@ -1,0 +1,17 @@
+[Unit]
+Description=Vestor Go Backend Core Service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/vestor/backend
+ExecStart=/home/ubuntu/vestor/backend/bin/server
+Restart=always
+RestartSec=5s
+Environment=PORT=8080
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
