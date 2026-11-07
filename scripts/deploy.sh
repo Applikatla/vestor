@@ -4,6 +4,23 @@
 # ==============================================================================
 set -euo pipefail
 
+# Ensure Go, Node, PM2 paths are loaded in non-interactive sessions
+[ -f ~/.profile ] && source ~/.profile || true
+[ -f ~/.bashrc ] && source ~/.bashrc || true
+export PATH=$PATH:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/go/bin:/snap/bin
+
+if ! command -v go >/dev/null 2>&1; then
+    for cand in /usr/local/go/bin /snap/bin $HOME/go/bin $HOME/.go/bin /usr/lib/go/bin; do
+        if [ -x "$cand/go" ]; then
+            export PATH="$PATH:$cand"
+            break
+        fi
+    done
+fi
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || true
+
 PROJECT_DIR="${1:-$HOME/vestor}"
 echo "=========================================================="
 echo "Starting Vestor Deployment on $(hostname)"

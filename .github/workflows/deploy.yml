@@ -82,6 +82,26 @@ jobs:
           script_stop: true
           script: |
             set -e
+
+            # Source user profiles and ensure Go, Node, PM2 paths are loaded in non-interactive SSH
+            [ -f ~/.profile ] && source ~/.profile || true
+            [ -f ~/.bashrc ] && source ~/.bashrc || true
+            export PATH=$PATH:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/go/bin:/snap/bin
+
+            # Fallback dynamic discovery for Go binary if not in standard PATH
+            if ! command -v go >/dev/null 2>&1; then
+              for cand in /usr/local/go/bin /snap/bin $HOME/go/bin $HOME/.go/bin /usr/lib/go/bin; do
+                if [ -x "$cand/go" ]; then
+                  export PATH="$PATH:$cand"
+                  break
+                fi
+              done
+            fi
+
+            # Fallback dynamic discovery for Node/NVM
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || true
+
             PROJECT_DIR="$HOME/vestor"
             
             if [ ! -d "$PROJECT_DIR" ]; then
